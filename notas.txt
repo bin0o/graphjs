@@ -1,0 +1,134 @@
+--------------------------------------------------------------------
+Reunião 18/03
+Dúvidas:
+  - Todos os packages podem acabar por estar também no dataset de aplicações. O que é que caracterizamos só como packages e como apps? packages criados são para benchmarks e verdadeiras são para ultimo dataset
+  - Preferível ter tudo num container para aceder pelo localhost? não
+  - O que fazer agora?
+
+Durante:
+comprar domain (dominios.pt) e usar letsEncrypt
+entry point e sinks
+
+-----------------------------------------------------------------------
+Reunião 25/03
+Dúvidas:
+  - Consideramos como sink o request ou quando damos log do req? req
+  - axios sink.
+  - osm-static-maps ssrf não está resolvido
+  - fuxa não tem patch por isso 1.2.4 ainda é vuln
+  - ssrf-agent não está resolvido
+  - ssrf-agent não tem sink porque isto é má validação que resulta em SSRF
+  - jsreport ainda é vulneravel
+
+Durante:
+ - ngrok
+ - quando tenho app guardar as 2 sources (app e pac) e 2 sinks; function call dentro da app;
+ - experimentar versoes atuais osm-static-maps (4.2.0)
+
+-----------------------------------------------------------------------
+Reunião 01/04
+Dúvidas:
+  - osm-static-maps ssrf não está resolvido no 3.10.1 mas 3.11.0 o download não funciona
+  - jsreport ainda é vulneravel
+
+Durante:
+  
+
+-----------------------------------------------------------------------
+Reunião 08/04
+Dúvidas:
+  - desmotivado
+  - o que fazer a seguir?
+
+Durante:
+  - 1ºpasso:
+    - fazer modulos que deem flag às queries do graphjs (injection)
+    - fazer modulos que não deem flag no graphjs (perceber queries) (injection)
+  2º passo:
+    - colocar sinks e sources ssrf no config
+    - fazer query para ssrf básica ()
+    - fazer modulo para bater na ssrf basica
+    - ir incrementando a query
+  3º passo:
+    - passar vuln estudadas para modulo 
+    - ver se query dá flag ao modulo
+
+-----------------------------------------------------------------------
+Reunião 24/04
+Dúvidas:
+    - que sources e sinks posso colocar?
+    - manter query de injection inicialmente ou fazer já uma coisa elaborada?
+  
+Durante:
+  - fazer novas classes para nova query, baseada na injection (alterar sinks e sources)
+  - correr module basico com axios ou http
+
+-----------------------------------------------------------------------
+Reunião 08/05
+Dúvidas:
+    - no folder problems temos exemplos em que não deteta no mesmo file mas deteta em files diff, e acho que devia detetar (ping guilherme)
+    - deteta vuln no intra_injection/not_flagged/input/case2 quando não devia detetar (normal)
+    - já tenho alguns exemplos feitos para ssrf (2 vulns diff no unidici)
+    - há casos em que não só é necessario um sink como também uma options especifica
+    - preciso do dataset anotado porque não sei qual é a norma para processar multiplos files
+    - caso da maquina que o stor deu
+
+-----------------------------------------------------------------------
+
+Reunião 15/05
+Dúvidas:
+    - axios (o problema é na sanitização)
+    - há um teste que verifica secure_return_caller e de facto não há vuln reportadas mas quando são files diff deteta
+    - queria a lista anotada para saber como está a estrutura dos modulos 
+    - num dos ultimos commits eles colocaram uma opção para analisar todo o dataset (vulcan, secbench, etc), mas não colocaram no github os tais datasets
+
+
+Durante:
+    - marcar como vulnerabilidade e passou numa potencial sanitização
+    - mandar mail a Mafalda sobre datasets do Graphjs (como funcionam a função de analisar datasets)
+    - falar com guilherme sobre exemplos de FP
+-----------------------------------------------------------------------
+
+Reunião 22/05
+Problemas:
+    - leitura de pacotes no config.json:
+        - quando usamos um require no pacote e o resultado é uma função (index1) temos 2 problemas:
+            - não é considerada função mas sim alias e por isso não é detetada
+            - quando utilizada como parametro x.x não é detetada
+        - 
+Dúvidas:
+    
+vulnerabilidades:
+    - axios: erro no esprisma parsing
+    - cors-proxy: não consigo identificar o fetch como sink
+    - link-preview-js: funciona com o package certo
+    - node-pdf-generator: mesmo problema do fetch
+    - phantom-seo: funciona mas damos flag a todas as funcoes open
+    - ssrf-req-filter: funciona mas damos flag a todas as funcoes call (nem sei se é aqui que acontece o request ou no socket.on)
+    - svg2png: não deteta provalmente por não detetar source to sink
+    - undici: erro no esprima parsing
+
+
+Durante:
+    - verificar o que se passa no graph do countercase e nao passa no case
+    - ver se o erro origina dos node_module/ (verificar se isto acontece por ir buscar typescript)
+    - como é que o parser 
+    - ver datasets e como correr datasets
+-----------------------------------------------------------------------
+
+
+
+
+
+
+
+
+TODO
+- entry point e sinks
+- ver os que não fiz
+- passar os que não têm docker para docker
+
+REVER:
+- ssrf-agent não está resolvido
+- ssrf-agent não tem sink porque isto é má validação que resulta em SSRF
+

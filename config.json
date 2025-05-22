@@ -148,6 +148,35 @@
                     {"package": "fs", "args": [ 1 ]}
                 ]
             }
+        ], 
+        "ssrf": [
+            {
+                "sink": "open",
+                "type": "function",
+                "args": [ 1 ]
+            },
+            {
+                "sink": "htmlToPdf",
+                "type": "function",
+                "args": [ 1, 2 ]
+            },
+            {
+                "sink": "fetch",
+                "type": "function",
+                "args": [ 1, 2 ]
+            },
+            {
+                "sink": "call",
+                "type": "function",
+                "args": [ 1, 2, 3 ]
+            },
+            {
+                "sink": "spawnSync",
+                "type": "package",
+                "packages": [
+                    {"package": "child_process", "args": [ 1, 2 ]}
+                ]
+            }
         ]
     },
     "sources": [

@@ -1,0 +1,12 @@
+MATCH
+				(:TAINT_SOURCE)
+					-[taint:PDG]
+						->(param:PDG_OBJECT)
+			WHERE
+				taint.RelationType = 'TAINT' RETURN taint.Id, taint.RelationType, param.Id, param.IdentifierName;
+
+
+
+Details:
+
+Every param ("this" included) of every function on the main file

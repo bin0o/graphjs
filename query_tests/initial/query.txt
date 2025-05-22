@@ -1,0 +1,15 @@
+1nd query:
+marca como possivel taint flow todos os argumentos utilizados para function calls (exported: eval, etc)
+
+2nd query:
+A function call to a declared function in another declared function block
+
+process_call_graph:
+Depth First Search throughout the dictionary, so goes to the last called function
+
+check_propagation:
+1 step: ver se a called function chega a um return por edges que são valid, para ver se há propagacao
+2 step: marcar como valid os argumentos do function_call que vão dar ao return dentro da called function
+
+mark_exported_params:
+marca como isExported todos param (this) no main file

@@ -1,0 +1,16 @@
+MATCH 
+                            (arg:PDG_OBJECT)
+                                -[arg_edge:PDG]
+                                    ->(call:PDG_CALL)
+             
+                        WHERE 
+                            arg_edge.IdentifierName = "this" OR arg_edge.IdentifierName = "undefined"
+             
+                        RETURN arg.Id, arg.IdentifierName, arg_edge.RelationType, arg_edge.IdentifierName, call.Id, call.IdentifierName;
+
+
+Objective:
+
+flag as valid (may have data flow) relations between args and function calls (exported)
+
+flows de args entre modulos
