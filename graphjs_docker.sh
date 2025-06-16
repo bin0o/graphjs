@@ -82,5 +82,5 @@ docker run -it \
     -v "${input_dir}":/input \
     -v "${output_path}":/output_path \
     graphjs \
-    /bin/bash -c "sudo chown graphjs:graphjs -R /output_path; python3 graphjs -f /input/$fname -o /output_path ${FLAGS}; chmod 777 -R /output_path;"
+    /bin/bash -c "sudo chown graphjs:graphjs -R /output_path; python3 graphjs.py -f /input/$fname -o /output_path ${FLAGS}; chmod 777 -R /output_path;"
 #docker system prune -f
