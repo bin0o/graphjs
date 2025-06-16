@@ -32,6 +32,7 @@ export class GraphNode {
     private _subtype: string;
 
     private _exported: boolean;
+    private _returns: GraphNode | null;
     private readonly _argsObjsIds: number[][];
 
     constructor(id: number, type: string, obj = {}) {
@@ -52,6 +53,7 @@ export class GraphNode {
         this._subtype = ""
         this._exported = false;
         this._argsObjsIds = [];
+        this._returns = null;
     }
 
     get argsObjIDs(): number[][] {
@@ -92,6 +94,10 @@ export class GraphNode {
 
     get namespace(): string | null {
         return this._namespace;
+    }
+
+    get returns(): GraphNode | null {
+        return this._returns;
     }
 
     set namespace(namespace) {
@@ -152,6 +158,10 @@ export class GraphNode {
 
     set arguments(value: boolean) {
         this._arguments = value;
+    }
+
+    setReturns(returnNode: GraphNode) {
+        this._returns = returnNode;
     }
 
     addPropertyDependencies(dep: Dependency[]): void {

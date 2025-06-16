@@ -56,9 +56,36 @@ function constructObject(node: any, trackers: DependencyTracker, cpg: Graph, ide
         });
 
         return exportedObject;
-    } else if (node.type === "FunctionExpression") {
+        // ArrowFunctionExpression is for anontmous function exportations
+    } else if (node.type === "FunctionExpression" || node.type === "ArrowFunctionExpression") {
         // Is a function, just return its cpg (by returning the head of the graph)
-        return findFuncNode(identifier, trackers);
+        const funcNode = findFuncNode(identifier, trackers);
+
+        if (funcNode != null) {
+
+            // We add to the function the function it is returning as param _returns of the GraphNode, in cases of:
+            /*
+            function f(){
+                return (x,y)=>{
+                    eval (x)
+                }
+            }
+            */
+            const bodyStmts = funcNode?.obj?.init?.body?.body || [];
+            for (const stmt of bodyStmts) {
+                if (stmt.type === "ReturnStatement" && stmt.argument?.type === "Identifier") {
+                    const retName = stmt.argument.name;
+                    const decl = findDeclaration(retName, trackers, cpg);
+                    const init = decl?.obj?.init;
+
+                    if (decl && (init?.type === "FunctionExpression" || init?.type === "ArrowFunctionExpression")) {
+                       funcNode.setReturns(decl);
+                    }
+                }
+            }
+        }
+
+        return funcNode;
     }
 
     return {};
@@ -165,10 +192,17 @@ export function findCorrespondingFile(targetName: string, context: number, track
                 // if we're dealing with a subObject with need to find the parent object
                 // holds the module (thus we iterate again)
                 const split = module.split(".");
+                
                 if (split.length > 2) {
                     targetName = split[0];
                     propertiesToTraverse.push(...split.slice(1));
-                } else { targetName = ""; }
+                } 
+                else if (split.length > 1){
+                    module = split[0];
+                    targetName = "";
+                    propertiesToTraverse.push(...split.slice(1));
+                }
+                else { targetName = ""; }
                 break;
             }
         }

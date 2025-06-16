@@ -98,6 +98,8 @@ function traverseDependencyGraph(depGraph: any, config: Config, normalizedOutput
         exportedObjects.set(currFile, exported);
         exportedObjects.set(currFile.slice(0, -3), exported); // remove the .js extension (it might be referenced without it)
 
+        const returnedFunctionMap = new Map<string |null|undefined, string[]>()
+
         // add the exported functions to cpg to generate the final graph
         trackers.callNodesList.forEach((callNode: GraphNode) => {
             const { calleeName, functionName } = getFunctionName(callNode);
@@ -105,7 +107,31 @@ function traverseDependencyGraph(depGraph: any, config: Config, normalizedOutput
             let [module, propertiesToTraverse] = findCorrespondingFile(calleeName, callNode.functionContext, trackers);
             propertiesToTraverse.push(functionName);
 
+            for (const [key, value] of returnedFunctionMap.entries()) {
+                if (key?.includes(functionName)){
+                    module = value[0];
+                    propertiesToTraverse.pop()
+                    propertiesToTraverse.push(value[1])
+                    break;
+                }
+            }
+            
             if (module) { // external call
+
+                const returnEdge = callNode.edges.find(
+                  e => e.type === "PDG" && e.label === "RET"
+                );
+
+                if (returnEdge) {
+                    const returnNode = returnEdge.nodes.find( 
+                        n=> n.type === "PDG_OBJECT"
+                    )
+                    // This function returns a value than can be a function
+                    const functionFactory = [];
+                    functionFactory.push(module,functionName)
+                    returnedFunctionMap.set(returnNode?.identifier,functionFactory)
+                }
+
                 module = path.join(dir, module);
                 const exportedObj: any = exportedObjects.get(module);
 
@@ -114,21 +140,25 @@ function traverseDependencyGraph(depGraph: any, config: Config, normalizedOutput
                 const funcGraph: GraphNode | undefined = retrieveFunctionGraph(exportedObj, propertiesToTraverse);
 
                 if (funcGraph) {
-                    // add the exported function to the start nodes of the graph
-                    cpg.addExternalFuncNode(`function ${module}.${funcGraph.identifier ?? ""}`, funcGraph);
+                    const trueFuncGraph = funcGraph?.returns ?? funcGraph;
 
-                    const params = funcGraph.edges.filter((e: GraphEdge) => e.label === "param").map((e: GraphEdge) => e.nodes[1]);
+                    // Use the final resolved function (original or returned) for CG/ARG construction
+                    cpg.addExternalFuncNode(`function ${module}.${trueFuncGraph.identifier ?? ""}`, trueFuncGraph);
+
+                    const params = trueFuncGraph.edges
+                        .filter((e: GraphEdge) => e.label === "param")
+                        .map((e: GraphEdge) => e.nodes[1]);
 
                     // connect object arguments to the parameters of the external function
                     callNode.argsObjIDs.forEach((args: number[]) => {
                         args.forEach((arg: number, index) => {
-                            if (arg !== -1) { // if the argument is a constant its value is -1 (thus literals aren't considred here)
+                            if (arg !== -1 && params[index + 1]) { // if the argument is a constant its value is -1 (thus literals aren't considred here)
                                 cpg.addEdge(arg, callNode.id, { type: "PDG", label: "ARG", objName: params[index + 1].identifier });
                             }
                         });
                     });
 
-                    cpg.addEdge(callNode.id, funcGraph.id, { type: "CG", label: "CG" })
+                    cpg.addEdge(callNode.id, trueFuncGraph.id, { type: "CG", label: "CG" });
                 }
             }
         });
