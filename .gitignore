@@ -31,3 +31,9 @@ node_modules*
 
 tests/output
 diff.output
+
+datasets/
+
+output/
+
+parser/package-lock.json
