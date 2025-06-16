@@ -6,9 +6,9 @@
             ->(called_func:VariableDeclarator),
 (func)
 -[:AST]
-    ->(:FunctionExpression)
+    ->(callee)
 WHERE
-ref_edge.RelationType = "call"
+ref_edge.RelationType = "call" AND (callee.Type="FunctionExpression" OR callee.Type="ArrowFunctionExpression")
 RETURN DISTINCT func.Id, func.IdentifierName, call.Id, call.IdentifierName, called_func.Id, called_func.IdentifierName; */
 
 Details:
