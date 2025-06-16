@@ -5,28 +5,42 @@ import re
 from .neo4j_import.utils import timers
 
 
-# Launches process
+# # Launches process
+# import subprocess
+# import sys
+
+# Launches process with optional sudo for Neo4j commands
 def launch_process(command: str, args: str, output_file=None):
-	command_args = [command] + args.split(" ")
-	process = subprocess.Popen(command_args, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-	result, _ = process.communicate()  # Wait for the process to finish and capture stdout and stderr
-	if process.returncode != 0:
-		print(result)
-		sys.exit(1)
+    # Prepend 'sudo' for neo4j or neo4j-admin
+    if command in ["neo4j", "neo4j-admin"]:
+        command_args = ["sudo", command] + args.split(" ")
+    else:
+        command_args = [command] + args.split(" ")
 
-	result_decoded = result.decode("utf-8")
+    process = subprocess.Popen(command_args, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+    result, _ = process.communicate()
 
-	# Save stdout and stderr to the output file
-	if not output_file:
-		print(result_decoded)
-	else:
-		with open(output_file, "w") as f:
-			f.write(result_decoded)
+    if process.returncode != 0:
+        print(result)
+        sys.exit(1)
+
+    result_decoded = result.decode("utf-8")
+
+    if not output_file:
+        print(result_decoded)
+    else:
+        with open(output_file, "w") as f:
+            f.write(result_decoded)
+
 
 
 # Launch process in background (with timeout)
 def launch_process_bg(command: str, args: str, timeout, wait_for_output=None, output_file=None):
-	command_args = [command] + args.split(" ")
+	# Prepend 'sudo' for neo4j or neo4j-admin
+	if command in ["neo4j", "neo4j-admin"]:
+		command_args = ["sudo", command] + args.split(" ")
+	else:
+		command_args = [command] + args.split(" ")
 	process = subprocess.Popen(command_args, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, stdin=subprocess.PIPE)
 	stdout = ""
 
