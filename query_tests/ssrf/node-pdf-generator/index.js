@@ -3,7 +3,7 @@
 // same ips forever https://stackoverflow.com/questions/39493490/provide-static-ip-to-docker-containers-via-docker-compose
 
 var http = require('http')
-var htmlToPdf = require('wkhtmltopdf')
+//var htmlToPdf = require('wkhtmltopdf')
 var conf = require('./conf.js')
 
 http

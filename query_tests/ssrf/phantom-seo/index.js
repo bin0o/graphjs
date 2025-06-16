@@ -33,8 +33,6 @@ var prerenderPage = function(req, res, next) {
           console.log('onError', err);
         });
         return page.open(url);
-
-        //phantom.WebPage.open(url)
       })
       .then(function(status) {
         pageStatus = status;

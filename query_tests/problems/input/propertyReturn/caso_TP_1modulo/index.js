@@ -1,10 +1,10 @@
 
 function g(userInput) {
-  return { data: userInput };
+  return userInput
 }
 
 function f(x) {
-  eval(g(x).data)
+  eval(g(x))
 }
 
 module.exports = {f}

@@ -1,0 +1,6 @@
+{
+  "dependencies": {
+    "node-pdf-generator": "0.0.6",
+    "wkhtmltopdf": "0.1.4"
+  }
+}
