@@ -85,8 +85,7 @@ if [ "$(docker ps -q -f name=$CONTAINER_NAME)" ]; then
     echo "Neo4j is now running!"
     echo "Web interface: http://localhost:${HTTP_PORT}"
     echo "Bolt connection: bolt://localhost:${BOLT_PORT}"
-    echo "Username: ${NEO4J_USER}"
-    echo "Password: ${NEO4J_PASSWORD}"
+
     
     # ==== Connect to cypher-shell ====
     echo "Connecting to cypher-shell..."
@@ -97,3 +96,5 @@ else
 fi
 
 docker rm -f neo4j_import_test
+sudo rm -rf "$DATA_PATH"
+sudo rm -rf "$LOGS_PATH"
