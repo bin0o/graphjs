@@ -110,11 +110,70 @@ vulnerabilidades:
 
 
 Durante:
-    - verificar o que se passa no graph do countercase e nao passa no case
-    - ver se o erro origina dos node_module/ (verificar se isto acontece por ir buscar typescript)
-    - como é que o parser 
+    - verificar o que se passa no graph do countercase e nao passa no case:
+        - ENCONTREI PROBLEMA: no countercase há uma veri que é validada porque o flow vai para fora do ficheiro e bate no undefined do set_this_undefined_calls, no entanto no case não é validada porque o data flow não vai para outro file nem conta como return
+        para mostrar ao stor ver case normal como não é validade, é validada no countercase e nã sendo validada no case1 esse conta como return e aparece validada pelor return
+    - ver se o erro origina dos node_module/ (verificar se isto acontece por ir buscar typescript):
+        - VERDADE (quando o módulo é feito em typescript)
+    - como é que o parser:
+        -tenho alguma ideia
     - ver datasets e como correr datasets
 -----------------------------------------------------------------------
+Reunião 29/05
+Problemas:
+
+Dúvidas:
+
+
+
+Durante:
+
+-----------------------------------------------------------------------
+Reunião 05/06
+vulnerabilidades:
+    - axios: erro no esprisma parsing
+    - cors-proxy: não consigo identificar data flow mas consigo identificar fetch
+    - link-preview-js: funciona com o package certo
+    - node-pdf-generator: funciona mas damos flag a todas as funcoes htmlToPdf
+    - phantom-seo: funciona mas damos flag a todas as funcoes open
+    - ssrf-req-filter: funciona mas damos flag a todas as funcoes call (nem sei se é aqui que acontece o request ou no socket.on)
+    - svg2png: não deteta provalmente por não detetar source to sink
+    - undici: erro no esprima parsing
+
+Problemas:
+  - quando lidamos com nested functions, anonymous functions e higher-order exports precisamos de dar export a todas as funções ou corremos o risco do analiser não ver a função
+  - não deteta se tentarmos dar require de uma função e.g, (apenas para ficheiros não modulos)
+  const { helper } = require('./helper')
+  mas sim, se dermos require a um file e depois usarmos uma função
+  const helper = require('./helper')
+  - não deteta quando está (wrapped inside closure, hidden inside nested return function)
+  Basicamente o que isto quer dizer é que não deteta quando uma função retorna outra e só depois podemos usar esse return para chamar a função que queremos
+
+Informação sobre parsing de modulos:
+  - não necessitamos de ter o node_modules localmente para detetar
+  - passa pelo modulo se o tivermos localmente (não sei se é necessário)
+
+
+
+Durante:
+  - mudar parser
+  - quando temos anonymous exportada dar-lhe o nome do require dela no chamante
+
+-----------------------------------------------------------------------
+Reunião 12/06
+
+
+Durante:
+  - mudar express_app para ter funçoes normais em que os param são o metodo do route; req, res (com o nome do /)
+  - ver parsing do primeiro problema e da factory function
+
+-----------------------------------------------------------------------
+Reunião 19/06
+
+  Trabalho: 
+    - Consegui detetar o meu exemplo mas não o módulo por causa do acrescimo de dificuldade (muito dificil fazer o tracing the params sendo que não há nenhum param ligado à chamada do middleware)
+    - Consegui detetar o { g }
+    
 
 
 
