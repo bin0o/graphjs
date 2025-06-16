@@ -38,20 +38,39 @@ class Query:
 					(func:VariableDeclarator)
 						-[:REF]
 							->(param:PDG_OBJECT)
-								-[edges:PDG*1..]
-									->(return:PDG_RETURN)
+								
+					WHERE 
+						func.Id = \"{func}\"
 
-				WHERE 
-					func.Id = \"{func}\" AND
-					ALL(
+				OPTIONAL MATCH 
+						(param)
+						-[edges:PDG*1..]
+							->(return:PDG_RETURN)
+						WHERE ALL(
 						edge in edges WHERE
 						NOT edge.RelationType = "ARG" OR
 						edge.valid = true
 					)	
-								
+
+				OPTIONAL MATCH
+					(param)-[edge:PDG]->(prop:PDG_OBJECT)
+					<-[edge1:PDG]-(obj:PDG_OBJECT)
+					-[edge2:PDG]->(indirectReturn:PDG_RETURN)
+
+					WHERE edge.RelationType = "DEP" AND
+						  edge1.RelationType = "SO" AND
+						  edge2.RelationType = "DEP"
+
+				WITH 
+					param,
+					coalesce(return, indirectReturn) AS ret,
+					obj
+
+				WHERE 
+					ret IS NOT NULL
 
 				MATCH
-					(obj:PDG_OBJECT)
+					(obj1:PDG_OBJECT)
 						-[arg_edge:PDG]
 							->(call:PDG_CALL)
 								-[:CG]
@@ -61,6 +80,7 @@ class Query:
 					arg_edge.IdentifierName = param.IdentifierName
 
 				SET arg_edge.valid = true
+
 				RETURN *
 			"""
 
@@ -102,9 +122,9 @@ class Query:
 									->(called_func:VariableDeclarator),
 					(func)
 						-[:AST]
-							->(:FunctionExpression)
+							->(callee)
 				WHERE
-					ref_edge.RelationType = "call"
+					ref_edge.RelationType = "call" AND (callee.Type="FunctionExpression" OR callee.Type="ArrowFunctionExpression")
 					RETURN DISTINCT func, COLLECT({call: call, called_func: called_func}) AS calls
 		"""
 

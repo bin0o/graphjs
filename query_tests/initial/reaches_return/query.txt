@@ -40,3 +40,147 @@ Isto dá:
 function createObject(userInput) {
   return userInput;
 }
+
+
+
+
+MATCH 
+		(func:VariableDeclarator)
+			-[:REF]
+				->(param:PDG_OBJECT)
+					
+		WHERE 
+		func.Id = "76"
+
+MATCH
+		(param)
+			-[edge:PDG]
+				->(property:PDG_OBJECT)
+		
+		WHERE edge.RelationType = "DEP"
+
+MATCH 
+		(diffProperty:PDG_OBJECT)
+			-[edge1:PDG]
+				->(property)
+		
+		WHERE edge1.RelationType = "SO"
+
+MATCH
+		(diffProperty)
+			-[edges:PDG*1..]
+				->(result:PDG_RETURN)
+
+		RETURN param.Id, param.IdentifierName, diffProperty.Id, diffProperty.IdentifierName, return.Id, return.IdentifierName;
+----------------------------------------------
+
+MATCH 
+		(func:VariableDeclarator)
+			-[:REF]
+				->(param:PDG_OBJECT)
+					
+		WHERE 
+		func.Id = "76"
+
+OPTIONAL MATCH 
+			(param)
+			-[edges:PDG*1..]
+				->(return:PDG_RETURN)
+		WHERE ALL(
+		edge in edges WHERE
+		NOT edge.RelationType = "ARG" OR
+		edge.valid = true
+	)	
+
+OPTIONAL MATCH
+		(param)-[:PDG {RelationType: "DEP"}]->(prop:PDG_OBJECT)
+		<-[:PDG {RelationType: "SO"}]-(obj:PDG_OBJECT)
+		-[:PDG {RelationType: "DEP"}]->(indirectReturn:PDG_RETURN)
+
+
+WITH 
+  param,
+  coalesce(return, indirectReturn) AS ret,
+  obj
+
+WHERE 
+  ret IS NOT NULL
+
+RETURN 
+  param.Id AS paramId,
+  param.IdentifierName AS paramName,
+  ret.Id AS returnId,
+  ret.IdentifierName AS returnName,
+  obj.IdentifierName AS objectName
+
+----------------------------------------------
+
+MATCH 
+		(func:VariableDeclarator)
+			-[:REF]
+				->(param:PDG_OBJECT)
+					
+		WHERE 
+		func.Id = "76"
+
+OPTIONAL MATCH 
+			(param)
+			-[edges:PDG*1..]
+				->(return:PDG_RETURN)
+		WHERE ALL(
+		edge in edges WHERE
+		NOT edge.RelationType = "ARG" OR
+		edge.valid = true
+	)	
+
+OPTIONAL MATCH
+		(param)-[:PDG {RelationType: "DEP"}]->(prop:PDG_OBJECT)
+		<-[:PDG {RelationType: "SO"}]-(obj:PDG_OBJECT)
+		-[:PDG {RelationType: "DEP"}]->(indirectReturn:PDG_RETURN)
+
+
+WITH 
+  param,
+  coalesce(return, indirectReturn) AS ret,
+  obj
+
+WHERE 
+  ret IS NOT NULL
+
+MATCH
+	(obj1:PDG_OBJECT)
+		-[arg_edge:PDG]
+			->(call:PDG_CALL)
+				-[:CG]
+					->(func)
+WHERE
+	arg_edge.IdentifierName = param.IdentifierName
+
+SET arg_edge.valid = true
+
+RETURN 
+  param.Id AS paramId,
+  param.IdentifierName AS paramName,
+  obj1.IdentifierName AS objectName
+
+
+---------------------------
+
+
+MATCH
+	(obj:PDG_OBJECT)
+		-[arg_edge:PDG]
+			->(call:PDG_CALL)
+				-[:CG]
+					->(func)
+WHERE
+	arg_edge.IdentifierName = "124.userInput-o22"
+
+SET arg_edge.valid = true
+
+RETURN 
+  arg_edge.Id AS paramId,
+  arg_edge.IdentifierName AS paramName,
+  ret.Id AS returnId,
+  ret.IdentifierName AS returnName,
+  obj.IdentifierName AS objectName
