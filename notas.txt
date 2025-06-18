@@ -173,6 +173,8 @@ Reunião 19/06
   Trabalho: 
     - Consegui detetar o meu exemplo mas não o módulo por causa do acrescimo de dificuldade (muito dificil fazer o tracing the params sendo que não há nenhum param ligado à chamada do middleware)
     - Consegui detetar o { g }
+    - Consegui detetar return {data: userInput};
+    - Consegui dar fix ao FP do returnLiteral
     
 
 

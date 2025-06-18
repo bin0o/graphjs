@@ -54,12 +54,15 @@ class Query:
 
 				OPTIONAL MATCH
 					(param)-[edge:PDG]->(prop:PDG_OBJECT)
-					<-[edge1:PDG]-(obj:PDG_OBJECT)
+					<-[edges1:PDG*1..]-(obj:PDG_OBJECT)
 					-[edge2:PDG]->(indirectReturn:PDG_RETURN)
 
-					WHERE edge.RelationType = "DEP" AND
-						  edge1.RelationType = "SO" AND
-						  edge2.RelationType = "DEP"
+					WHERE
+						edge.RelationType = "DEP" AND
+						ALL(
+						edge1 in edges1 WHERE
+						edge1.RelationType in ["SO","NV"] ) AND
+						edge2.RelationType = "DEP"
 
 				WITH 
 					param,
@@ -106,7 +109,7 @@ class Query:
 						->(:PDG_CALL)
 
 			WHERE 
-				arg_edge.IdentifierName = "this" OR arg_edge.IdentifierName = "undefined"
+				arg_edge.IdentifierName = "this"
 
 			SET arg_edge.valid = true
 		"""
