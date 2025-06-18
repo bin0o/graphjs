@@ -1,6 +1,6 @@
-
 function g(userInput) {
-  return userInput
+  data.input.input = userInput;
+  return data;
 }
 
 function f(x) {

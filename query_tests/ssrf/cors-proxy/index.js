@@ -2,16 +2,16 @@ const url = require('url')
 
 const {send} = require('micro')
 
-const middleware = require('./middleware1')
+const middleware = require('./middleware')
 
 // build the actual handler once, by calling the factory
-const handler = middleware.finalFunction({
-  origin: process.env.ALLOW_ORIGIN || '*',
-  insecure_origins: (process.env.INSECURE_ORIGINS || '').split(',').filter(Boolean)
-})
+// const handler = middleware.finalFunction({
+//   origin: process.env.ALLOW_ORIGIN || '*',
+//   insecure_origins: (process.env.INSECURE_ORIGINS || '').split(',').filter(Boolean)
+// })
 
 async function service (req, res) {
-  handler(req, res, () => {
+  middleware(req, res, () => {
     let u = url.parse(req.url, true)
 
     if (u.pathname === '/') {
