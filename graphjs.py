@@ -21,6 +21,7 @@ import detection.neo4j_import.utils.timers as timers
 import detection.run as detection
 import detection.utils as utils
 import constants
+import preProcesser
 
 # MDG generator location
 mdg_generator_path = constants.MDG_PATH
@@ -96,7 +97,9 @@ def get_index_file(file_path):
             'index.js',  # Default main file
             'lib/index.js',  # Common folder for libraries
             'src/index.js',  # Common folder for source files
-            'dist/index.js'  # Common folder for distribution files
+            'dist/index.js',  # Common folder for distribution files
+            'server.js',
+            'app.js'
         ]
 
         for file in possible_files:
@@ -109,7 +112,7 @@ def get_index_file(file_path):
         sys.exit(f"No default entry point found in directory: ${file_path}")
 
 
-def check_arguments(file_path, output_path, graph_output, run_output, dirty):
+def check_arguments(file_path, output_path, processed_output ,graph_output, run_output, dirty):
     # Check if input file exists
     if not os.path.exists(file_path):
         sys.exit(f"Input file doesn't exist: ${file_path}")
@@ -127,15 +130,17 @@ def check_arguments(file_path, output_path, graph_output, run_output, dirty):
         os.mkdir(graph_output)  # Create graph output folder
     if not os.path.exists(run_output):
         os.mkdir(run_output)  # Create run output folder (neo4j stats)
+    if not os.path.exists(processed_output):
+        os.mkdir(processed_output)  # Create processed output folder (preProcessing app)
 
 
 def build_graphjs_cmd(file_path, graph_output, silent=True):
     # os.system(f"tsc --project {parser_main_path}")  # Make sure graphjs is in the latest compiled version
     abs_input_file = os.path.abspath(file_path)  # Get absolute input file
-    if silent:
-        return ["node", f"{mdg_generator_path} -f {abs_input_file} -o {graph_output} --csv --silent"]
-    else:
-        return ["node", f"{mdg_generator_path} -f {abs_input_file} -o {graph_output} --csv --silent --graph --i=AST"]
+    # if silent:
+    #     return ["node", f"{mdg_generator_path} -f {abs_input_file} -o {graph_output} --csv --silent"]
+    # else:
+    return ["node", f"{mdg_generator_path} -f {abs_input_file} -o {graph_output} --csv --silent"]
 
 
 def run_queries(file_path, graph_path, run_path, summary_path, time_path,
@@ -165,18 +170,47 @@ def run_graph_js(file_path, output_path, query_type, with_types=False, generate_
         output_path = os.path.abspath(os.path.join(os.path.basename(file_path), "tool_outputs/graphjs"))
     else:
         output_path = os.path.abspath(output_path)
+    processed_output =os.path.join(output_path, "processed")
     graph_output = os.path.join(output_path, "graph")
     run_output = os.path.join(output_path, "run")
     time_output = os.path.join(run_output, "time_stats.txt")
     summary_path = os.path.join(output_path, "taint_summary.json")
-    check_arguments(file_path, output_path, graph_output, run_output, dirty)
+    check_arguments(file_path, output_path, processed_output ,graph_output, run_output, dirty)
+
+    processed_file_path = processed_output+'/processed.js'
 
     # If file_path is a directory, get the package index file
     if os.path.isdir(file_path):
+        # Keep the folder containing the file
+        file_path_folder = file_path
+        # Get the index file
         file_path = get_index_file(file_path)
 
+    # Get basename of the file to exclude when copying the files to the processed output folder
+    # Example: file_path folder = ├── g.js
+    #                             └── index.js
+    #          processed_output folder = ├── g.js
+    #                                    └── processed.js (processed index)
+    file_to_exclude = os.path.basename(file_path)
+
+    # Copy everything except the file itself
+    for item in os.listdir(file_path_folder):
+        if item == file_to_exclude:
+            continue  # Skip the specific file
+        source = os.path.join(file_path_folder, item)
+        destination = os.path.join(processed_output, item)
+
+        if os.path.isdir(source):
+            shutil.copytree(source, destination, dirs_exist_ok=True)
+        else:
+            shutil.copy2(source, destination)
+
+
+    # preProcess app
+    preProcesser.ExpressRouteTransformer().transform_file(file_path, processed_file_path)    
+
     # Build MDG
-    graphjs_cmd = build_graphjs_cmd(file_path, graph_output, silent)
+    graphjs_cmd = build_graphjs_cmd(processed_file_path, graph_output, silent)
     print("[STEP 1] MDG: Generating...")
     start_time = timers.start_timer()
     utils.launch_process(graphjs_cmd[0], graphjs_cmd[1])
@@ -185,7 +219,7 @@ def run_graph_js(file_path, output_path, query_type, with_types=False, generate_
 
     # Execute Graph Traversals (Queries)
     print("[STEP 2] Queries: Importing the graph...")
-    run_queries(file_path, graph_output, run_output, summary_path, time_output,
+    run_queries(processed_file_path, graph_output, run_output, summary_path, time_output,
                 (with_types or generate_exploit), query_type, optimized)
     print("[STEP 3] Queries: Completed.")
 
