@@ -16,3 +16,18 @@ A function call to a declared function in another function declared block
 
 Types:
 Can be a function imported from another file or within the same file
+
+
+MATCH 
+					(func:VariableDeclarator)
+						-[ref_edge:REF]
+							->(call:PDG_CALL)
+								-[:CG]
+									->(called_func:VariableDeclarator),
+					(func)
+						-[:AST]
+							->(:FunctionExpression)
+				WHERE
+					ref_edge.RelationType = "call"
+
+                RETURN DISTINCT func.Id, func.IdentifierName, call.Id, call.IdentifierName, called_func.Id, called_func.IdentifierName;

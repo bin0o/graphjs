@@ -159,7 +159,19 @@
                 ]
             },
             {
+                "sink": "get",
+                "type": "package",
+                "packages": [
+                    {"package": "axios", "args": [ 1, 2, 3, 4 ]}
+                ]
+            },
+            {
                 "sink": "htmlToPdf",
+                "type": "function",
+                "args": [ 1 , 2 ]
+            },
+            {
+                "sink": "get",
                 "type": "function",
                 "args": [ 1 , 2 ]
             },

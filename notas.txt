@@ -168,14 +168,69 @@ Durante:
   - ver parsing do primeiro problema e da factory function
 
 -----------------------------------------------------------------------
-Reunião 19/06
+Reunião 20/06
 
   Trabalho: 
     - Consegui detetar o meu exemplo mas não o módulo por causa do acrescimo de dificuldade (muito dificil fazer o tracing the params sendo que não há nenhum param ligado à chamada do middleware)
     - Consegui detetar o { g }
     - Consegui detetar return {data: userInput};
     - Consegui dar fix ao FP do returnLiteral
+    - Consegui detetar a app mas tenho problema no await
+
+  Dúvidas: 
+    - await 
+    - factory function no appToModule
+    - papel que o colega lhe vai dar
+    - criar outra key para login na vm
+
+
+  Durante:
+    - ver guilherme
+    - tirar async
+    - ver o que estoura appToModule
+    - ver cors com neo4j queries
+    - factoryFunction vai ter de ver as 2 func
+    - ver caso em que usa param do createMidd
+
+Reunião 1/07
+
+  Trabalho: 
+    - falei com o guilherme, ele testou com a ae e usou os datasets que lá estavam mas somou os TFP ao TFP
+    - já tenho proProcessor
+    - o erro no EPIPE vem de gerar o grafo
+
+  Dúvidas: 
     
+
+
+  Durante:
+    - ver cors com neo4j queries
+    - factoryFunction vai ter de ver as 2 func
+    - ver caso em que usa param do createMidd
+    - criar app com modulo testado pelo guilherme para testar
+    - middleware podem ser diff em diff metodos
+    - testar processed app (possivel alteracao para next ser a proxima funcao)
+    - verificar o FP que saiu
+
+    - res.redirect é uma chamada a outro endpoint
+
+Reunião 10/07
+
+  Trabalho: 
+    - middleware diff em diff metodos
+    - processed app tem agora o CFG funcional
+    - criar app com modulo testado pelo guilherme para testar
+
+  Dúvidas: 
+    - Para criar o processed_output dentro do output tenho de colocar todos os outros ficheiros dentro do processed para o grafo ser feito, ora isto leva tempo
+        - 2 soluções:
+            - criar o processed dentro do input e assim não tenho de copiar ficheiros
+            - copiar apenas os ficheiros required pelos ficheiros de forma recursiva (mais dificil)
+
+
+  Durante:
+   
+
 
 
 

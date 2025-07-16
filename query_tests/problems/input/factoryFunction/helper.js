@@ -2,10 +2,10 @@ function handle(req, res) {
     eval(req)
 }
 
-function createMiddleware() {
-  
+function createMiddleware(rew) {  
+
   return (req, res) => {
-    handle(req, res)
+    handle(req, res, rew)
   }
   
 }
