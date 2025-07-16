@@ -109,7 +109,7 @@ class Query:
 						->(:PDG_CALL)
 
 			WHERE 
-				arg_edge.IdentifierName = "this"
+				arg_edge.IdentifierName = "this" OR arg_edge.IdentifierName = "undefined"
 
 			SET arg_edge.valid = true
 		"""
