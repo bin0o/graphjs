@@ -185,6 +185,8 @@ def run_graph_js(file_path, output_path, query_type, with_types=False, generate_
         file_path_folder = file_path
         # Get the index file
         file_path = get_index_file(file_path)
+    else:
+        file_path_folder = os.path.dirname(file_path)
 
     # Get basename of the file to exclude when copying the files to the processed output folder
     # Example: file_path folder = ├── g.js
@@ -207,7 +209,8 @@ def run_graph_js(file_path, output_path, query_type, with_types=False, generate_
 
 
     # preProcess app
-    preProcesser.ExpressRouteTransformer().transform_file(file_path, processed_file_path)    
+    route2Module = preProcesser.Route2ModuleTransformer()
+    route2Module.transform_file(file_path, processed_file_path)
 
     # Build MDG
     graphjs_cmd = build_graphjs_cmd(processed_file_path, graph_output, silent)

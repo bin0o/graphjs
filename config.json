@@ -171,11 +171,6 @@
                 "args": [ 1 , 2 ]
             },
             {
-                "sink": "get",
-                "type": "function",
-                "args": [ 1 , 2 ]
-            },
-            {
                 "sink": "open",
                 "type": "function",
                 "args": [ 1 ]

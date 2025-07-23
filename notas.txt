@@ -192,6 +192,8 @@ Reunião 20/06
     - factoryFunction vai ter de ver as 2 func
     - ver caso em que usa param do createMidd
 
+-----------------------------------------------------------------------
+
 Reunião 1/07
 
   Trabalho: 
@@ -214,7 +216,9 @@ Reunião 1/07
 
     - res.redirect é uma chamada a outro endpoint
 
-Reunião 10/07
+-----------------------------------------------------------------------
+
+Reunião 17/07
 
   Trabalho: 
     - middleware diff em diff metodos
@@ -229,11 +233,33 @@ Reunião 10/07
 
 
   Durante:
-   
+    - Resolver middleware diff nos diff metodos
+    - Criar uma app que usa os modulos do processed
+    - Investigar SSRF dentro dos template com data (usar render como require em que os temp são função e os )
+    - fazer um mapa das linhas onde as sinks se encontram no ficheiro original para o processed ficheiro 
+
+-----------------------------------------------------------------------
+
+Reunião 24/07
+
+  Trabalho: 
+    - tudo do preProcesser
+    - criar app que usa modulos do processed
+    - já processo app2module e depois module2app e funciona
+
+  Dúvidas: 
+    
+  Durante:
+    
 
 
-
-
+final:
+ 1. dataset (tudo anotado)
+ 2. parser que pega em app e converte em modulo (e passar depois de modulo para ser usado em app)+ metadata linhas
+ 3. parsar todas as apps do dataset em modulos
+ 4. correr o graphjs nos modulos
+ 5. validar que as vulns são corretas
+ 6. (opcional) mostrar equivalencia funcional
 
 
 
