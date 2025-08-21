@@ -15,7 +15,7 @@
   "dependencies": {
     "dependency-tree": "^10.0.9",
     "escodegen": "^2.0.0",
-    "esprima": "^4.0.1",
+    "espree": "^10.4.0",
     "graphviz": "0.0.9",
     "typescript": "^4.5.5",
     "yargs": "^17.2.1"
@@ -23,6 +23,7 @@
   "devDependencies": {
     "@types/escodegen": "^0.0.7",
     "@types/esprima": "^4.0.3",
+    "@types/espree": "^10.1.0",
     "@types/estree": "^0.0.50",
     "@types/graphviz": "^0.0.34",
     "@types/jest": "^27.5.2",

@@ -2,8 +2,10 @@ import yargs = require("yargs/yargs");
 import fs = require("fs");
 import path = require("path");
 import esprima = require("esprima");
+import espree = require("espree")
 import escodegen from "escodegen";
 import dependencyTree from "dependency-tree";
+import { Program } from 'estree';
 
 import { normalizeScript } from "./traverse/normalization/normalizer";
 import buildAST from "./traverse/ast_builder";
@@ -26,12 +28,26 @@ import { printStatus } from "./utils/utils";
 function parse(filename: string, config: Config, fileOutput: string, silentMode: boolean, nodeCounter: number,
     edgeCounter: number): [Graph, DependencyTracker] {
     try {
+        var modulePath = filename.substring(0, filename.lastIndexOf('/'))
+        if (isNodeModule(filename) && !nodeModuleMainMap.has(modulePath)) {
+            const mainFile = getMainFileOfModule(modulePath);
+            if (mainFile) {
+                nodeModuleMainMap.set(mainFile[1], mainFile[0]);
+            }
+        }
+
         let fileContent: string = fs.readFileSync(filename, "utf8");
         // Remove shebang line
         if (fileContent.slice(0, 2) === "#!") fileContent = fileContent.replace(/^#!(.*\r?\n)/, '\n')
 
         // Parse AST
-        const ast = esprima.parseModule(fileContent, { loc: true, tolerant: true });
+
+        const ast = espree.parse(fileContent, {
+            ecmaVersion: 'latest',
+            sourceType: 'module',
+            loc: true
+        }) as unknown as Program;
+        //const ast = esprima.parseModule(fileContent, { loc: true, tolerant: true });
         !silentMode && printStatus("AST Parsing");
 
         // Normalize AST
@@ -75,6 +91,32 @@ function parse(filename: string, config: Config, fileOutput: string, silentMode:
     return [new Graph(null), new DependencyTracker(new Graph(null), new Map<number, number[]>())];
 }
 
+function isNodeModule(dep: string): boolean {
+    return dep.includes("node_modules/")
+}
+
+
+function getMainFileOfModule(moduleName: string): [string, string] | null {
+    try {
+        const parts = moduleName.split("node_modules/");
+        const package1 = parts[1].split("/")
+
+        if (parts.length < 2 || (package1.length > 1 && !package1.includes("src"))) return null;
+
+        const modulePath = path.join(parts[0],"node_modules",package1[0])
+        const module = path.basename(modulePath)
+
+        const pkgPath = path.join(modulePath, "package.json");
+        const pkg = JSON.parse(fs.readFileSync(pkgPath, "utf-8"));
+        const mainFile = pkg.main || "index.js";
+        const resolvedMain = path.resolve(modulePath, mainFile);
+        return [resolvedMain, module];
+    } catch (e: any) {
+        console.warn(`Failed to resolve main file for module "${moduleName}":`, e.message);
+        return null;
+    }
+}
+
 // Traverse the dependency tree of the given file and generate the code property graph that accounts for all the dependencies
 function traverseDependencyGraph(depGraph: any, config: Config, normalizedOutputDir: string, silentMode: boolean): Graph {
     function traverse(currFile: string, depGraph: any, config: Config, normalizedOutputDir: string, silentMode: boolean,
@@ -83,7 +125,7 @@ function traverseDependencyGraph(depGraph: any, config: Config, normalizedOutput
         let cpg = new Graph(null);
         for (const [file, childDepGraph] of Object.entries(depGraph)) { // first parse its dependencies
             // skip empty dependencies or already parsed files
-            if (exportedObjects.has(file)) continue;
+            if (exportedObjects.has(file) || file.slice(-3) != ".js") continue;
             [cpg, nodeCounter, edgeCounter, trackers] = traverse(file, childDepGraph, config, normalizedOutputDir, silentMode, exportedObjects, nodeCounter, edgeCounter);
         }
 
@@ -132,8 +174,16 @@ function traverseDependencyGraph(depGraph: any, config: Config, normalizedOutput
                     returnedFunctionMap.set(returnNode?.identifier,functionFactory)
                 }
 
-                module = path.join(dir, module);
-                const exportedObj: any = exportedObjects.get(module);
+                if (nodeModuleMainMap.has(module)){
+                    module = nodeModuleMainMap.get(module)
+                }
+                else {
+                    module = path.join(dir, module);
+                }
+                var exportedObj:any = [];
+                if (module){
+                    exportedObj = exportedObjects.get(module);
+                }
 
                 if (!exportedObj || Object.keys(exportedObj).length === 0) return;
 
@@ -221,6 +271,8 @@ const depTree = dependencyTree({
     filename,
     directory: path.dirname(filename)
 });
+
+const nodeModuleMainMap: Map<string, string> = new Map();
 
 const graph = traverseDependencyGraph(depTree, config, path.dirname(normalizedPath), silentMode);
 
