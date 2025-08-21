@@ -56,6 +56,8 @@ def add_arguments(parser: argparse.ArgumentParser) -> None:
                         help="Don't clean output dir if it exists.")
     parser.add_argument("--optimized-import", dest="optimized", action="store_true",
                         help="Try optimized import without stopping neo4j")
+    parser.add_argument("-a", "--application", dest="application" ,action="store_true",
+                        help="Generates a working application using the processed application as a module")
 
 
 
@@ -162,7 +164,7 @@ def run_queries(file_path, graph_path, run_path, summary_path, time_path,
     )
 
 
-def run_graph_js(file_path, output_path, query_type, with_types=False, generate_exploit=False, silent=True, dirty=False, optimized=False):
+def run_graph_js(file_path, output_path, query_type, with_types=False, generate_exploit=False, silent=True, dirty=False, optimized=False, application=False):
     # Get absolute paths
     file_path = os.path.abspath(file_path)
     # Generate default output path
@@ -178,6 +180,7 @@ def run_graph_js(file_path, output_path, query_type, with_types=False, generate_
     check_arguments(file_path, output_path, processed_output ,graph_output, run_output, dirty)
 
     processed_file_path = processed_output+'/processed.js'
+    application_file_path = processed_output+'/app.js'
 
     # If file_path is a directory, get the package index file
     if os.path.isdir(file_path):
@@ -211,6 +214,9 @@ def run_graph_js(file_path, output_path, query_type, with_types=False, generate_
     # preProcess app
     route2Module = preProcesser.Route2ModuleTransformer()
     route2Module.transform_file(file_path, processed_file_path)
+    if application:
+        module2App = preProcesser.Module2AppTRansformer(route2Module)
+        module2App.transform_file(processed_file_path, application_file_path)
 
     # Build MDG
     graphjs_cmd = build_graphjs_cmd(processed_file_path, graph_output, silent)
@@ -230,4 +236,4 @@ def run_graph_js(file_path, output_path, query_type, with_types=False, generate_
 if __name__ == "__main__":
     # Parse arguments
     args = parse_arguments()
-    run_graph_js(args.file, args.output, args.query_type, args.with_types, args.exploit, args.silent, args.dirty, args.optimized)
+    run_graph_js(args.file, args.output, args.query_type, args.with_types, args.exploit, args.silent, args.dirty, args.optimized, args.application)

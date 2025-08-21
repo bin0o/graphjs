@@ -6,13 +6,14 @@ class Route2ModuleTransformer:
     def __init__(self):
         self.express_const = ""
         self.grouped_routes = {}
+        self.global_middlewares = []
 
     def extract_express_const(self, line:str):
         splitted_line = line.split(" ")
 
-        if len(splitted_line) == 4 and splitted_line[3] == "express()":
+        if len(splitted_line) == 4 and (splitted_line[3] == "express()" or splitted_line[3] == "express();"):
             self.express_const = splitted_line[1]
-        elif len(splitted_line) == 2 and ("=" and "express()") in splitted_line[1]:
+        elif len(splitted_line) == 2 and ("=" and ("express()" or "express();")) in splitted_line[1]:
             splitted_line = splitted_line[1].split("=")
             self.express_const = splitted_line[0]
 
@@ -248,12 +249,7 @@ class Route2ModuleTransformer:
         return params
     
     def remove_unsupported(self, content):
-        """Remove async/await keywords from function content"""
-        # Remove async keyword from function declarations
-        content = re.sub(r'\basync\s+', '', content)
-        # Remove await keyword
-        content = re.sub(r'\bawait\s+', '', content)
-        # Remove optional chaining operators (?.)
+        """Remove optional chaining keywords from function content"""
         content = re.sub(r'\?\.', '.', content)
         return content
     
@@ -334,15 +330,19 @@ class Route2ModuleTransformer:
             
         return f"function {func_name}({', '.join(params)})"
     
-    def create_method_function_signature(self, func_name, method, route_params):
+    def create_method_function_signature(self, func_name, method, route_params, async_function):
         """Create method-specific function signature"""
         params = ['req', 'res']
         
         # Add route parameters
         for param in route_params:
             params.append(param)
+        
+        function = ""
+        if (async_function):
+            function = "async "
             
-        return f"function {func_name}_{method}({', '.join(params)})"
+        return function + f"function {func_name}_{method}({', '.join(params)})"
     
     def convert_middleware_to_calls(self, middleware_items, method_func_name, route_params, has_handler):
         """Convert middleware items to function calls"""
@@ -357,31 +357,21 @@ class Route2ModuleTransformer:
         
         # If there's no handler, execute the middleware directly without chaining
         if not has_handler:
-            calls = []
-            for middleware_item in middleware_items:
-                if '(' in middleware_item:
-                    # Middleware with parameters - use the complete call as is
-                    calls.append(f"{middleware_item}")
-                else:
-                    # Simple middleware name - call with req, res
-                    calls.append(f"{middleware_item}(req, res);")
-            return calls
-        
-        # Build the chain from right to left (innermost to outermost) when there's a handler
-        method_params = ['req', 'res']
-        method_params.extend(route_params)
-        current_call = f"{method_func_name}({', '.join(method_params)})"
-        
-        # Chain middleware from last to first
+            current_call = f"{middleware_items[-1]}(req, res)"
+            middleware_items.pop()
+        else:
+            # Build the chain from right to left (innermost to outermost) when there's a handler
+            method_params = ['req', 'res']
+            method_params.extend(route_params)
+            current_call = f"{method_func_name}({', '.join(method_params)})"
+
         for middleware_item in reversed(middleware_items):
             if '(' in middleware_item:
-                # Middleware with parameters - this is more complex, for now treat as simple call
-                # You might need to parse this more carefully depending on your specific needs
-                middleware_name = middleware_item.split('(')[0]
-                current_call = f"{middleware_name}(req, res, {current_call})"
+                # Middleware with parameters - use the complete call as is
+                current_call = f"{middleware_item}(req, res, () => {current_call})"
             else:
-                current_call = f"{middleware_item}(req, res, {current_call})"
-        
+                # Simple middleware name - call with req, res
+                current_call = f"{middleware_item}(req, res, () => {current_call})"
         return [f"{current_call};"]
     
     def generate_function_code(self, func_info):
@@ -402,7 +392,7 @@ class Route2ModuleTransformer:
         method_functions_to_generate = []
         
         for i, method in enumerate(method_keys):
-            middleware, body, has_handler = methods[method]
+            middleware, body, has_handler, async_function = methods[method]
             method_func_name = f"{func_name}_{method}"
             
             if i == 0:
@@ -412,50 +402,41 @@ class Route2ModuleTransformer:
             
             # Generate middleware calls or direct function call
             if has_handler:
-                method_functions_to_generate.append((method, middleware, body))
-                if middleware:
-                    middleware_calls = self.convert_middleware_to_calls(middleware, method_func_name, route_params, has_handler)
-                    for call in middleware_calls:
-                        lines.append(f"        {call}")
-                else:
-                    # No middleware, call method function directly
-                    method_params = ['req', 'res']
-                    method_params.extend(route_params)
-                    lines.append(f"        {method_func_name}({', '.join(method_params)});")
-            else:
-                # Middleware-only route - call middleware directly
-                if middleware:
-                    middleware_calls = self.convert_middleware_to_calls(middleware, method_func_name, route_params, has_handler)
-                    for call in middleware_calls:
-                        lines.append(f"        {call}")
-                else:
-                    lines.append("        // No middleware or handler defined")
+                method_functions_to_generate.append((method, middleware, body, async_function))
+            if middleware:
+                middleware_calls = self.convert_middleware_to_calls(middleware, method_func_name, route_params, has_handler)
+                for call in middleware_calls:
+                    lines.append(f"        {call}")
+            elif not middleware and has_handler:
+                # No middleware, call method function directly
+                method_params = ['req', 'res']
+                method_params.extend(route_params)
+                lines.append(f"        {method_func_name}({', '.join(method_params)});")
             
+            else:
+                lines.append("        // No middleware or handler defined")
+        
             lines.append("    }")
         
         lines.append("")
         
         # Generate method-specific functions only for routes that have handlers
-        for method, middleware, body in method_functions_to_generate:
+        for method, middleware, body, async_function in method_functions_to_generate:
             method_func_name = f"{func_name}_{method}"
             
-            # Create method function signature
-            method_signature = self.create_method_function_signature(func_name, method, route_params)
-            lines.append(f"    {method_signature} {{")
-            
             # Process body lines
-            if body:  # Only add body if it exists
+            if body:  # Only add method if body exists
+                # Create method function signature
+                method_signature = self.create_method_function_signature(func_name, method, route_params, async_function)
+                lines.append(f"    {method_signature} {{")
                 for line in body:
                     if line.strip():
-                        # Remove async/await
+                        # Remove chaining operators
                         processed_line = self.remove_unsupported(line)
                         # Fix parameter references (req.params.id -> id)
                         for param in route_params:
                             processed_line = re.sub(f'req\\.params\\.{param}', param, processed_line)
                         lines.append(f"        {processed_line}")
-            else:
-                # No body found
-                lines.append("        // Route handler - add your logic here")
             
             lines.append("    }")
             lines.append("")
@@ -471,6 +452,20 @@ class Route2ModuleTransformer:
             output += self.grouped_routes[func_key]["func_name"] + ', '
         output += f"{self.express_const}}}"
         return output
+    
+    def extract_global_middleware(self, line):
+        """Captura chamadas app.use(...) para middlewares globais"""
+        pattern = rf'{self.express_const}\.use\((.+)\)'
+        match = re.search(pattern, line.strip())
+        if match:
+            # Suporte para chamadas múltiplas como: app.use(a, b, c)
+            raw = match.group(1)
+            parts = self.split_respecting_parentheses_and_objects(raw)
+            for p in parts:
+                p = p.strip()
+                if p:  # ignora vazios
+                    self.global_middlewares.append(p)
+
     
     def transform_file(self, input_file, output_file):
         """Transform the entire Express.js file"""
@@ -504,6 +499,11 @@ class Route2ModuleTransformer:
                 # Extract function body
                 body_lines, end_index = self.extract_function_body(lines, i, middleware)
 
+                async_function = False
+
+                if ("async" in line):
+                    async_function = True
+
                 route = {
                     'method': method,
                     'path': path,
@@ -512,6 +512,7 @@ class Route2ModuleTransformer:
                     'middleware': middleware,
                     'body': body_lines,
                     'has_handler': has_handler,
+                    'async_function': async_function,
                     'line': i
                 }
                 
@@ -519,10 +520,11 @@ class Route2ModuleTransformer:
 
                 i = end_index + 1
             else:
-                # Remove server creation 
+                self.extract_global_middleware(line)
                 i += 1
+                # Remove server creation 
                 if (f"{self.express_const}.listen" in line):
-                    continue
+                    break
                 output_map[i] = self.remove_unsupported(line)
 
         
@@ -537,8 +539,8 @@ class Route2ModuleTransformer:
                     'methods': {},
                     'first_line': route['line']
                 }
-            
-            self.grouped_routes[func_key]['methods'][route['method']] = [route['middleware'], route['body'], route['has_handler']]
+            combined_middleware = self.global_middlewares + route['middleware']
+            self.grouped_routes[func_key]['methods'][route['method']] = [combined_middleware, route['body'], route['has_handler'], route['async_function']]
         
         # Create output mapping for routes
         for func_key, func_info in self.grouped_routes.items():
