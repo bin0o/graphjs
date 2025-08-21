@@ -58,6 +58,19 @@ function handleAssignmentExpression(stmtId: number, stmt: GraphNode, left: Graph
     }
 }
 
+function handleAwaitExpression(stmtId: number, stmt: GraphNode, left : GraphNode, right:GraphNode, config: Config, trackers: DependencyTracker): DependencyTracker {
+    // Get the argument of the await expression (e.g., axios.get(...))
+
+    const argumentNode = getASTNode(right, "argument");
+    
+    if (!argumentNode) {
+        return trackers;
+    }
+
+    // Handle the awaited expression as a variable assignment by delegating to handleVariableAssignment
+    return handleVariableAssignment(stmtId, stmt, left, argumentNode, config, trackers)
+}
+
 /* Evaluate ExpressionStatement -> Assignment Expression (x = e), when left is Identifier */
 function handleVariableAssignment(stmtId: number, stmt: GraphNode, left: GraphNode, right: GraphNode, config: Config, trackers: DependencyTracker): DependencyTracker {
     const leftIdentifier: Identifier = left.obj.id ? left.obj.id : left.obj;
@@ -100,6 +113,7 @@ function handleVariableAssignment(stmtId: number, stmt: GraphNode, left: GraphNo
             return handleBinaryExpression(stmtId, stmt, leftIdentifier, right, trackers);
         }
         case "AwaitExpression":
+            return handleAwaitExpression(stmtId, stmt, left, right, config, trackers )
         case "UnaryExpression":
         case "ThisExpression":
         case "Identifier": {
