@@ -1,7 +1,6 @@
 import yargs = require("yargs/yargs");
 import fs = require("fs");
 import path = require("path");
-import esprima = require("esprima");
 import espree = require("espree")
 import escodegen from "escodegen";
 import dependencyTree from "dependency-tree";
@@ -41,7 +40,6 @@ function parse(filename: string, config: Config, fileOutput: string, silentMode:
         if (fileContent.slice(0, 2) === "#!") fileContent = fileContent.replace(/^#!(.*\r?\n)/, '\n')
 
         // Parse AST
-
         const ast = espree.parse(fileContent, {
             ecmaVersion: 'latest',
             sourceType: 'module',
@@ -140,6 +138,9 @@ function traverseDependencyGraph(depGraph: any, config: Config, normalizedOutput
         exportedObjects.set(currFile, exported);
         exportedObjects.set(currFile.slice(0, -3), exported); // remove the .js extension (it might be referenced without it)
 
+        // map that stores the function that a function returns
+        // the map would store the identifier of the variable node has the key and the pair [*module name*,*function of module name*] has value of the key
+        // e.g. const middleware = helper.createMiddleware() would be {"middleware": [helper, createMiddleware]}
         const returnedFunctionMap = new Map<string |null|undefined, string[]>()
 
         // add the exported functions to cpg to generate the final graph
@@ -149,32 +150,25 @@ function traverseDependencyGraph(depGraph: any, config: Config, normalizedOutput
             let [module, propertiesToTraverse] = findCorrespondingFile(calleeName, callNode.functionContext, trackers);
             propertiesToTraverse.push(functionName);
 
-            for (const [key, value] of returnedFunctionMap.entries()) {
-                if (key?.includes(functionName)){
-                    module = value[0];
-                    propertiesToTraverse.pop()
-                    propertiesToTraverse.push(value[1])
-                    break;
+            // module being undefined may mean that a variable without module (middleware) is being called because it holds a functionFactory
+            // e.g. const middleware = helper.createMiddleware()
+            if (module === undefined){
+                for (const [key, value] of returnedFunctionMap.entries()) {
+                    // if the returnNode identifier (key) includes the functionName it means that this variable holds a functionFactory
+                    if (key?.includes(functionName)){
+                        // use the stored values so the functionFactory node is used
+                        module = value[0];
+                        propertiesToTraverse.pop()
+                        propertiesToTraverse.push(value[1])
+                        break;
+                    }
                 }
             }
-            
+
             if (module) { // external call
-
-                const returnEdge = callNode.edges.find(
-                  e => e.type === "PDG" && e.label === "RET"
-                );
-
-                if (returnEdge) {
-                    const returnNode = returnEdge.nodes.find( 
-                        n=> n.type === "PDG_OBJECT"
-                    )
-                    // This function returns a value than can be a function
-                    const functionFactory = [];
-                    functionFactory.push(module,functionName)
-                    returnedFunctionMap.set(returnNode?.identifier,functionFactory)
-                }
-
+                let originalNodeModuleName = null
                 if (nodeModuleMainMap.has(module)){
+                    originalNodeModuleName = module
                     module = nodeModuleMainMap.get(module)
                 }
                 else {
@@ -190,7 +184,34 @@ function traverseDependencyGraph(depGraph: any, config: Config, normalizedOutput
                 const funcGraph: GraphNode | undefined = retrieveFunctionGraph(exportedObj, propertiesToTraverse);
 
                 if (funcGraph) {
-                    const trueFuncGraph = funcGraph?.returns ?? funcGraph;
+                    // store the function that the funcGraph node returns because that is the function that the code will run
+                    // e.g. function createMiddleware() {  
+                    //          return (req, res) => {
+                    //              handle(req)
+                    //          }
+                    //      }
+                    const trueFuncGraph = funcGraph.returns ?? funcGraph;
+
+                    if (funcGraph.returns) {
+                        const returnEdge = callNode.edges.find(
+                        e => e.type === "PDG" && e.label === "RET"
+                        );
+        
+                        if (returnEdge) {
+                            // retrieve the identifier of the node where the function is being assigned to
+                            // e.g. const middleware = helper.createMiddleware(), in thus example the returnNode is the node related to middleware
+                            const returnNode = returnEdge.nodes.find( 
+                                n=> n.type === "PDG_OBJECT"
+                            )
+                            // This function returns another function
+                            const functionFactory = [];
+                            // store the values in the map
+                            if (module){
+                                functionFactory.push(path.basename(originalNodeModuleName ?? module),functionName)
+                            }
+                            returnedFunctionMap.set(returnNode?.identifier,functionFactory)
+                        }
+                    }   
 
                     // Use the final resolved function (original or returned) for CG/ARG construction
                     cpg.addExternalFuncNode(`function ${module}.${trueFuncGraph.identifier ?? ""}`, trueFuncGraph);
@@ -257,6 +278,8 @@ const configFile: string = path.resolve(__dirname, argv.config as string);
 const silentMode: boolean = argv.silent ?? false;
 const normalizedPath: string = `${path.join(argv.o, 'normalized.js')}`;
 
+const nodeModuleMainMap: Map<string, string> = new Map();
+
 // If silent mode is selected, do not show error traces
 if (silentMode) console.trace = function () {};
 
@@ -271,8 +294,6 @@ const depTree = dependencyTree({
     filename,
     directory: path.dirname(filename)
 });
-
-const nodeModuleMainMap: Map<string, string> = new Map();
 
 const graph = traverseDependencyGraph(depTree, config, path.dirname(normalizedPath), silentMode);
 
