@@ -159,14 +159,12 @@
                 ]
             },
             {
-                "sink": "get",
-                "type": "package",
-                "packages": [
-                    {"package": "axios", "args": [ 1, 2, 3, 4 ]}
-                ]
+                "sink": "htmlToPdf",
+                "type": "function",
+                "args": [ 1 , 2 ]
             },
             {
-                "sink": "htmlToPdf",
+                "sink": "get",
                 "type": "function",
                 "args": [ 1 , 2 ]
             },
@@ -179,6 +177,16 @@
                 "sink": "call",
                 "type": "function",
                 "args": [ 1, 2, 3 ]
+            },
+            {
+                "sink": "request",
+                "type": "function",
+                "args": [ 1, 2]
+            },
+            {
+                "sink": "connect",
+                "type": "function",
+                "args": [ 1, 2]
             }
         ]
     },

@@ -4,7 +4,7 @@ const bcrypt = require('bcrypt')
 const session = require('express-session')
 const flash = require('express-flash')
 const passport = require('passport')
-const db = require('./database/db')
+const db = require('../database/db')
 const initializePassport = require('./passportConfig')
 
 const app = express()
@@ -51,7 +51,7 @@ app.get("/posts/new", checkNotAuthenticated, (req,res) => {
     res.render("posts/new")
 })
 
-app.post("/posts", checkAuthenticated, async (req,res) => {
+app.post("/posts", checkNotAuthenticated, async (req,res) => {
 
     let results;
 
@@ -260,10 +260,9 @@ function checkAuthenticated(req, res, next) {
     }
 }
 
-
 function checkNotAuthenticated(req, res, next) {
     if (req.isAuthenticated()) {
-        return next();
+        return next()
     }
     else {
         res.redirect('/users/login')

@@ -246,11 +246,64 @@ Reunião 24/07
     - tudo do preProcesser
     - criar app que usa modulos do processed
     - já processo app2module e depois module2app e funciona
+    - passei de esprima para espree para conseguir parsar novas versões do ECMAS
+    - depois de alguns tweeks ao parser já não tenho erros
+    - consigo agora parsar todo o tipo de files porque excluo .ts
+    
 
-  Dúvidas: 
+  Problemas:
+    - quando usamos um middleware e é o middleware que tem a vuln temos o mesmo problema do cors_proxy
+    - app.use middleware
     
   Durante:
+    - Usar async await no processed
+    - flag para criar app a usar modulo
+    - tornar app.use para todas as vuln
+    - testar o pq de phantom-seo não estar a detetar
+    - testar apps do dataset
+    - lista de todas as alterações que fiz ao graph.js
+
+-----------------------------------------------------------------------
+
+Reunião 31/07
+
+  Trabalho: 
+    - remover chaining operator porque com o espree tenho um novo tipo na AST
+    - adicionei handling de await no parser (bastou ignorar o await e adicionar na mesma o Variable Assignment)
+    - flag para criar app a usar modulo
+    - deteto phantom porque consegui modificar a maneira como guardamos os exported_object dos modulos (quando damos require de um node_module damos apenas ao nome do modulo e não ao index file e quando guardamos guardamos como {nome_do_modulo}/index.js )
+      - agora crio um mapa para mapear o main file de todos os node_modules para depois o ir buscar
+    - passei app.use() para chained middleware
+
+  Falta:
+    - Passar app.use quando é especifico para um route
+    - parsar os metadados dos sinks e sources
+    - encontrar falso positivo
+    - testar o dataset
+    - começar graphjs de novo e ir adicionando coisas e testando para ter uma lista de alterações correta e testes que o comprovem
+
+  Durante: 
+    - testar se await sem variable assignment resulta
+    - verificar chain operator
+    - verificar flag silent
+    - diferença entre espree e esprima
+
+    -----------------------------------------------------------------------
+
+Reunião 01/09
+
+  Trabalho: 
     
+
+  Falta:
+    - verifica melhor o FP do helper.g 
+    - alterar o parser.ts no graphjs_new (tenho alterações do graphjs quando estava a verificar as mudanças)
+    - testar se await sem variable assignment resulta
+    - verificar chain operator
+    - verificar flag silent
+    - diferença entre espree e esprima
+
+  Durante: 
 
 
 final:

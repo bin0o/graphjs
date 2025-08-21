@@ -2,7 +2,7 @@
 const url = require('url')
 const {send} = require('micro')
 const microCors = require('micro-cors')
-const fetch = require('node-fetch')
+const { fetch } = require('node-fetch')
 
 const allowHeaders = [
   'accept-encoding',
