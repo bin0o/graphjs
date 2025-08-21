@@ -134,12 +134,27 @@ export function constructExportedObject(cpg: Graph, trackers: DependencyTracker)
 
         if (result) {
             let init = result.obj.init;
+            let notInit : string|undefined= "";
 
             if (!init) {
+                // if there's no init it means the identifier is associated with a variable that we need to find
                 const variable = trackers.variablesMap.get(result.identifier ?? "");
+                notInit = variable;
                 init = findDeclaration(variable, trackers, cpg)?.obj.init;
             }
-            if (init) { exportedObject = constructObject(init, trackers, cpg, result.identifier ?? ""); }
+            
+            if (init) { 
+                try {
+                    // if the init variable was initialized in the begining and not in the conditional then use the default result.identifier
+                    // if the init variable was null use the variable associated with the result.identifier (instead of using the name of a version of the variable use the main name)
+                    if (notInit === ""){
+                        notInit = result.identifier ?? ""
+                    }
+                    exportedObject = constructObject(init, trackers, cpg, notInit); 
+                } catch (e: any) {
+                    console.log("Error:", e.stack);
+                }
+            }
         }
     }
 
@@ -245,10 +260,13 @@ export function printDependencyGraph(tree: any, filename: string): void {
 // retrieve the graph node that corresponds to the exported object (may need to traverse properties)
 export function retrieveFunctionGraph(exportedObject: any, propertiesToTraverse: string[]): GraphNode | undefined {
     let result = exportedObject;
+    
     if (result instanceof GraphNode) { return result; }
-
+    
     for (const property of propertiesToTraverse) {
-        result = result[property];
+        if (property in result) {
+            result = result[property];
+        }
     }
 
     return result instanceof GraphNode ? result : undefined;
