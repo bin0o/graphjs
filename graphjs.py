@@ -58,6 +58,8 @@ def add_arguments(parser: argparse.ArgumentParser) -> None:
                         help="Try optimized import without stopping neo4j")
     parser.add_argument("-a", "--application", dest="application" ,action="store_true",
                         help="Generates a working application using the processed application as a module")
+    parser.add_argument("-p", "--preprocess", dest="preprocess" ,action="store_true",
+                        help="Pre process the express app and convert the routes to functions, in order to be able to be analysed by graphjs")
 
 
 
@@ -114,10 +116,12 @@ def get_index_file(file_path):
         sys.exit(f"No default entry point found in directory: ${file_path}")
 
 
-def check_arguments(file_path, output_path, processed_output ,graph_output, run_output, dirty):
+def check_arguments(file_path, output_path, processed_output ,graph_output, run_output, dirty, application, preprocess):
     # Check if input file exists
     if not os.path.exists(file_path):
         sys.exit(f"Input file doesn't exist: ${file_path}")
+    if application and not preprocess:
+        sys.exit("Application flag can only be used if PreProcess flag is used\n\nYou need to PreProcess an express.js application to then use that as a module for your application")
     # Clean previous output files
     if os.path.exists(output_path) and not dirty:
         for item in os.listdir(output_path):
@@ -132,17 +136,17 @@ def check_arguments(file_path, output_path, processed_output ,graph_output, run_
         os.mkdir(graph_output)  # Create graph output folder
     if not os.path.exists(run_output):
         os.mkdir(run_output)  # Create run output folder (neo4j stats)
-    if not os.path.exists(processed_output):
+    if preprocess and not os.path.exists(processed_output):
         os.mkdir(processed_output)  # Create processed output folder (preProcessing app)
 
 
 def build_graphjs_cmd(file_path, graph_output, silent=True):
     # os.system(f"tsc --project {parser_main_path}")  # Make sure graphjs is in the latest compiled version
     abs_input_file = os.path.abspath(file_path)  # Get absolute input file
-    # if silent:
-    #     return ["node", f"{mdg_generator_path} -f {abs_input_file} -o {graph_output} --csv --silent"]
-    # else:
-    return ["node", f"{mdg_generator_path} -f {abs_input_file} -o {graph_output} --csv --silent"]
+    if silent:
+        return ["node", f"{mdg_generator_path} -f {abs_input_file} -o {graph_output} --csv --silent"]
+    else:
+        return ["node", f"{mdg_generator_path} -f {abs_input_file} -o {graph_output} --csv --silent --graph --i=AST"]
 
 
 def run_queries(file_path, graph_path, run_path, summary_path, time_path,
@@ -164,7 +168,7 @@ def run_queries(file_path, graph_path, run_path, summary_path, time_path,
     )
 
 
-def run_graph_js(file_path, output_path, query_type, with_types=False, generate_exploit=False, silent=True, dirty=False, optimized=False, application=False):
+def run_graph_js(file_path, output_path, query_type, with_types=False, generate_exploit=False, silent=True, dirty=False, optimized=False, application=False, preprocess=False):
     # Get absolute paths
     file_path = os.path.abspath(file_path)
     # Generate default output path
@@ -177,7 +181,7 @@ def run_graph_js(file_path, output_path, query_type, with_types=False, generate_
     run_output = os.path.join(output_path, "run")
     time_output = os.path.join(run_output, "time_stats.txt")
     summary_path = os.path.join(output_path, "taint_summary.json")
-    check_arguments(file_path, output_path, processed_output ,graph_output, run_output, dirty)
+    check_arguments(file_path, output_path, processed_output ,graph_output, run_output, dirty, application, preprocess)
 
     processed_file_path = processed_output+'/processed.js'
     application_file_path = processed_output+'/app.js'
@@ -212,14 +216,17 @@ def run_graph_js(file_path, output_path, query_type, with_types=False, generate_
 
 
     # preProcess app
-    route2Module = preProcesser.Route2ModuleTransformer()
-    route2Module.transform_file(file_path, processed_file_path)
+    if preprocess:
+        route2Module = preProcesser.Route2ModuleTransformer()
+        route2Module.transform_file(file_path, processed_file_path)
+        file_path = processed_file_path
+    
     if application:
         module2App = preProcesser.Module2AppTRansformer(route2Module)
         module2App.transform_file(processed_file_path, application_file_path)
 
     # Build MDG
-    graphjs_cmd = build_graphjs_cmd(processed_file_path, graph_output, silent)
+    graphjs_cmd = build_graphjs_cmd(file_path, graph_output, silent)
     print("[STEP 1] MDG: Generating...")
     start_time = timers.start_timer()
     utils.launch_process(graphjs_cmd[0], graphjs_cmd[1])
@@ -236,4 +243,4 @@ def run_graph_js(file_path, output_path, query_type, with_types=False, generate_
 if __name__ == "__main__":
     # Parse arguments
     args = parse_arguments()
-    run_graph_js(args.file, args.output, args.query_type, args.with_types, args.exploit, args.silent, args.dirty, args.optimized, args.application)
+    run_graph_js(args.file, args.output, args.query_type, args.with_types, args.exploit, args.silent, args.dirty, args.optimized, args.application, args.preprocess)
