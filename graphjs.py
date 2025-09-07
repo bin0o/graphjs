@@ -195,28 +195,28 @@ def run_graph_js(file_path, output_path, query_type, with_types=False, generate_
     else:
         file_path_folder = os.path.dirname(file_path)
 
-    # Get basename of the file to exclude when copying the files to the processed output folder
-    # Example: file_path folder = ├── g.js
-    #                             └── index.js
-    #          processed_output folder = ├── g.js
-    #                                    └── processed.js (processed index)
-    file_to_exclude = os.path.basename(file_path)
-
-    # Copy everything except the file itself
-    for item in os.listdir(file_path_folder):
-        if item == file_to_exclude:
-            continue  # Skip the specific file
-        source = os.path.join(file_path_folder, item)
-        destination = os.path.join(processed_output, item)
-
-        if os.path.isdir(source):
-            shutil.copytree(source, destination, dirs_exist_ok=True)
-        else:
-            shutil.copy2(source, destination)
 
 
     # preProcess app
     if preprocess:
+        # Get basename of the file to exclude when copying the files to the processed output folder
+        # Example: file_path folder = ├── g.js
+        #                             └── index.js
+        #          processed_output folder = ├── g.js
+        #                                    └── processed.js (processed index)
+        file_to_exclude = os.path.basename(file_path)
+
+        # Copy everything except the file itself
+        for item in os.listdir(file_path_folder):
+            if item == file_to_exclude:
+                continue  # Skip the specific file
+            source = os.path.join(file_path_folder, item)
+            destination = os.path.join(processed_output, item)
+
+            if os.path.isdir(source):
+                shutil.copytree(source, destination, dirs_exist_ok=True)
+            else:
+                shutil.copy2(source, destination)
         route2Module = preProcesser.Route2ModuleTransformer()
         route2Module.transform_file(file_path, processed_file_path)
         file_path = processed_file_path

@@ -7,6 +7,7 @@ class Route2ModuleTransformer:
         self.express_const = ""
         self.grouped_routes = {}
         self.global_middlewares = []
+        self.route_middleware = {}
 
     def extract_express_const(self, line:str):
         splitted_line = line.split(" ")
@@ -454,18 +455,38 @@ class Route2ModuleTransformer:
         return output
     
     def extract_global_middleware(self, line):
-        """Captura chamadas app.use(...) para middlewares globais"""
         pattern = rf'{self.express_const}\.use\((.+)\)'
         match = re.search(pattern, line.strip())
-        if match:
-            # Suporte para chamadas múltiplas como: app.use(a, b, c)
-            raw = match.group(1)
-            parts = self.split_respecting_parentheses_and_objects(raw)
-            for p in parts:
-                p = p.strip()
-                if p:  # ignora vazios
-                    self.global_middlewares.append(p)
+        if not match:
+            return False
 
+        raw = match.group(1)
+        parts = self.split_respecting_parentheses_and_objects(raw)
+
+        if parts and parts[0].startswith("'") or parts[0].startswith('"'):
+            # Route + middleware(s)
+            route = parts[0].strip("'\"")
+            for p in parts[1:]:
+                if p:
+                    self.route_middleware.setdefault(route, []).append(p.strip())
+        else:
+            # Global middleware
+            for p in parts:
+                if p:
+                    self.global_middlewares.append(p.strip())
+            
+        return True
+        
+    def get_route_prefixes(self, route: str) -> list[str]:
+        """
+        Given '/blog/user/list', return:
+        ['/blog', '/blog/user', '/blog/user/list']
+        """
+        parts = [p for p in route.strip("/").split("/") if p]
+        prefixes = []
+        for i in range(1, len(parts) + 1):
+            prefixes.append("/" + "/".join(parts[:i]))
+        return prefixes
     
     def transform_file(self, input_file, output_file):
         """Transform the entire Express.js file"""
@@ -520,8 +541,9 @@ class Route2ModuleTransformer:
 
                 i = end_index + 1
             else:
-                self.extract_global_middleware(line)
                 i += 1
+                if (self.extract_global_middleware(line)):
+                    continue
                 # Remove server creation 
                 if (f"{self.express_const}.listen" in line):
                     break
@@ -539,7 +561,16 @@ class Route2ModuleTransformer:
                     'methods': {},
                     'first_line': route['line']
                 }
-            combined_middleware = self.global_middlewares + route['middleware']
+
+            paths = self.get_route_prefixes(route['path'])
+
+            # middlewares resolution
+            middlewares = [
+                mw
+                for p in paths if p in self.route_middleware
+                for mw in self.route_middleware[p]
+            ]
+            combined_middleware = self.global_middlewares + middlewares + route['middleware']
             self.grouped_routes[func_key]['methods'][route['method']] = [combined_middleware, route['body'], route['has_handler'], route['async_function']]
         
         # Create output mapping for routes
@@ -610,19 +641,19 @@ class Module2AppTRansformer:
 
 
 def main():
-    if len(sys.argv) != 4:
+    if len(sys.argv) != 3:
         print("Usage: python3 express_transformer.py <input_file> <processed_file> <app_file>")
         print("Example: python3 express_transformer.py server.js processed.js app.js")
         sys.exit(1)
     
     input_file = sys.argv[1]
     processed_file = sys.argv[2]
-    app_file = sys.argv[3]
+    #app_file = sys.argv[3]
     
     routeTransformer = Route2ModuleTransformer()
     success = routeTransformer.transform_file(input_file, processed_file)
-    moduleTransformer = Module2AppTRansformer(routeTransformer)
-    moduleTransformer.transform_file(processed_file, app_file)
+    # moduleTransformer = Module2AppTRansformer(routeTransformer)
+    # moduleTransformer.transform_file(processed_file, app_file)
     
     if not success:
         sys.exit(1)
