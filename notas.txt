@@ -283,7 +283,6 @@ Reunião 31/07
     - começar graphjs de novo e ir adicionando coisas e testando para ter uma lista de alterações correta e testes que o comprovem
 
   Durante: 
-    - testar se await sem variable assignment resulta
     - verificar chain operator
     - verificar flag silent
     - diferença entre espree e esprima
@@ -293,17 +292,63 @@ Reunião 31/07
 Reunião 01/09
 
   Trabalho: 
-    
+    - lista de todas as alterações que fiz ao graph.js
+    - escrita sobre alterações
+    - alterar o parser.ts no graphjs_new (tenho alterações do graphjs quando estava a verificar as mudanças)
+    - testar se await sem variable assignment resulta (depois de mudanças resulta)
+    - app.use individual
+    - verificar flag silent
+    - resolvi caso em que colocamos num sink diretamente num objeto (testar funcEvalObj e funcEvalConstObj)
+    - tentei resolver caso html-pdf-chrome
 
   Falta:
     - verifica melhor o FP do helper.g 
-    - alterar o parser.ts no graphjs_new (tenho alterações do graphjs quando estava a verificar as mudanças)
-    - testar se await sem variable assignment resulta
     - verificar chain operator
-    - verificar flag silent
-    - diferença entre espree e esprima
+    - awaiter (muito dificil)
+    - parsar os metadados dos sinks e dos sources (preProcesser.py)
+    - escrever a partir do finding await
+    - rever dataset
+    - recomeçar no dataset onde primeiro vais rever os sinks todos e os PoC (isto depende de como está a escrita)
+    - perguntar ao andré sobre await
+    - normObj por causa do data = {input2: {input1: userInput}}
+    - perguntar ao chat sobre data.input.input = userInput
+
+  Dúvida:
+    - explico com exemplos simplificados mesmo tendo encontrado os erros por causa das app
 
   Durante: 
+
+    
+  Ideias Escrita:
+    - antes da implementação escrever uma história por ordem cronologica dos meus findings, (primeiro testei as queries deles, depois as minhas e depois o dataset) e que mudanças foram surgindo com isso
+      - na implementação escrever por secções ( overall fixes/features or ssrf fixes/features) e se calhar separar ainda no preProcesser
+      - outra ideia que se pode fazer é separar por módulos como fizemos no PIC, preProcesser, modulo de criação de MDG e modulo de deteção
+    - houve muitos fixes que vieram por causa dos exemplos do dataser, simplifico e digo que vi os exemplos e criei exemplos mais simples ou uso os exemplos do dataset para lhes explicar?
+    - sinto que aqui podemos simplificar mas depois retirar alguns exemplos para explicar que as mudanças que fiz fizeram com que detetasse
+
+
+  exemplos queries -> exemplos modulos dataset -> preProcesser -> exemplos app dataset
+
+  Dataset:
+    axios: não deteta sink do modulo (rever)
+    cors: não
+    directus: sem PoC no dataset
+    ftp-srv: PoC não está acabado
+    fuxa: sem PoC no dataset
+    ghost: sem PoC no dataset
+    google-translate-api-browser: sem sink no modulo
+    html-pdf-chrome: não consigo detetar por causa de awaiter
+    jsreport: sem PoC 
+    kibana: sem PoC
+    kityminder: sem PoC
+    link-preview: não consigo detetar por causa de awaiter
+    node-pdf-app: não consigo detetar por causa do args.push() :(
+    phantomjs-seo: consigo huhuhuhu, rever parentesis que lixa o phantomjs
+    rendertron: não tenho PoC
+    request: rever
+    
+
+
 
 
 final:

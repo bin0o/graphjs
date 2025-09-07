@@ -187,6 +187,11 @@
                 "sink": "connect",
                 "type": "function",
                 "args": [ 1, 2]
+            },
+            {
+                "sink": "navigate",
+                "type": "function",
+                "args": [ 1, 2]
             }
         ]
     },

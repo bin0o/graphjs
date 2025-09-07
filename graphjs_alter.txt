@@ -1,0 +1,70 @@
+
+Melhorias queries de deteção
+
+- Detetar property returns ({data: userInput}) commit bc768f2
+data.data.userINput.
+    - Alterei a query checkPropagation
+
+
+
+- Adicionar à query do CallGraph funções anónimas com => commit  bc768f2
+    - Alterei a call_graph query
+
+
+- Detetar quando modulo exporta função anónima Commit 182c9aa
+    - Parser.ts: 
+        - colocar returnedFunctionMap para guardar qual é return de funções (caso em que uma função retorna outra função)
+        - if para quando chamamos a variavel que guarda uma função returned ir ao modulo da função returned
+        - ir 
+    - Node.ts:
+        - guarda o return de um node
+    - Multifile.ts:
+        - Guarda o return de um node não só quando há função mas também com arrowFunction
+- Detetar quando função retorna factory function (return (req,res)=>{qualquer coisa}) Commit 182c9aa
+    - Mesmas mudanças de cima
+
+- Detetar quando damos require a apenas uma função do modulo com {g} em vez de dar require do modulo todo Commit 182c9aa: Parser
+    - Multifile.ts:
+        Adicionar verificação ao findCorrespondentFile
+
+- Detetar vários property retuns (data.data.data.userInput) Commit 6f14e10
+    - Mudanças no checkPropagation query
+
+- Adicionei ficheiros: server.js e app.js aos ficheiros mais comuns Commit fce0a20
+    - find_main_file graphjs.py
+
+- Retirei possibilidade de grafo em csv porque estava a dar problemas no mdg Commit fce0a20
+    - Alterei graphjs.py
+
+- Adicionei preProcessor que convert os endpoints para funções legiveis pelo parser Commit fce0a20: resol problema
+    - Alterei Graphjs.py e preProcesser.py
+
+- Adicionei ao preProcesser converter de novo para aplicação: feat
+- Adicionar flag para criar app com o modulo
+
+
+- Alterei de esprima para espree de maneira a poder analisar os node_modules (por cause de ... e *): parser
+    - Fiz converte marado as unknown as Program;
+
+- Adicionei um mapa entre modulo do node_modulo com o seu main file para quando damos (require axios) ele ir buscar o ficheiro principal do modulo: parser
+
+- Não analiso nada que não acabe em .js: parser
+
+- No PDG_Builder dou handle das await expression: parser
+
+- Coloquei TryCatch no multifile.ts para não morrer e dar output de erro: parser
+
+- Quando construímos um exported_object e o node não tem init (provavelmente é const ola = função): parser
+    - ao dar init dei fix para ele não ir buscar o nome do init que tinha antes mas sim da função
+
+
+
+Melhorias ao Parser
+
+fix: 
+
+features: linguagem e novos problemas
+
+
+
+

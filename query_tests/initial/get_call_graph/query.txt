@@ -1,4 +1,4 @@
-/* MATCH 
+MATCH 
 (func:VariableDeclarator)
 -[ref_edge:REF]
     ->(call:PDG_CALL)
@@ -9,7 +9,7 @@
     ->(callee)
 WHERE
 ref_edge.RelationType = "call" AND (callee.Type="FunctionExpression" OR callee.Type="ArrowFunctionExpression")
-RETURN DISTINCT func.Id, func.IdentifierName, call.Id, call.IdentifierName, called_func.Id, called_func.IdentifierName; */
+RETURN DISTINCT func.Id, func.IdentifierName, call.Id, call.IdentifierName, called_func.Id, called_func.IdentifierName; 
 
 Details:
 A function call to a declared function in another function declared block

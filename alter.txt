@@ -1,0 +1,168 @@
+permitir correr neo4j localmente:
+    detection/utils.py (Commit 4d5a964)
+        - alterei launch_process para correr neo4j commands com sudo
+        - necessário porque o user neo4j é owner do neo4j e eu não posso correr sem sudo
+
+permitir detetar taint flow com return de obj properties:
+    detection/queries/query.py (Commit bc768f2)
+        - alterei o reaches_return para detetar obj.data = userInput
+        - CFG de "obj.data = userInput" é:
+            - userInput ->DEP-> obj.data
+            - obj ->SO-> obj.data
+            - obj ->DEP-> RET Obj
+        - para o reaches_return devolver este exemplo tive de colocar um OR:
+            - como estava antes (exemple de return simples)
+            OR
+            - exemplo de return obj.data 
+
+allow arrow anonymous functions to be recognized and exported:
+    parser/src/utils/multifile.ts (Commit 182c9aa)
+        - temos de alterar quando vamos construir o objeto exportado no parser
+        - para isto basta adicionar o ArrowFunctionExpression no if else
+        - permite que module.exports de arrowFunction sejam tidas em conta
+
+allow requiring function of module instead of whole module 
+    parser/src/utils/multifile.ts (Commit 182c9aa)
+        - multiple cases are shown in query_tests/FN/useFunctionModule
+        - workCase is detected because function g only acts as a middleman for the tainted param
+        - it only makes a difference when we have to analyse the inside of the exported function (e.g. when the sink is inside)
+        - because the parser does not recognize the function g as g but as helper.g
+        - workCase works because the propagation query is independent of the above error
+
+        - this was changed again, não precisamos de adicionar o nome ao propertiesToTraverse
+
+allow functions to return factory functions
+    detection/queries/query.py (Commit bc768f2)
+        - alterei o get_call_graph query para selecionar arrowFunction para além de functions
+            - isto é necessário nos casos em que a arrowFunction dá return de um sink com um param
+            - e.g: 
+                - (req) => {
+                -     eval(req)
+                -    }
+    parser/src/traverse/graph/node.ts (Commit 182c9aa)
+        - add _returns property that represents the function node that another function returns (making it a factoryFunction)
+        - function createMiddleware() {  
+        -     return (req, res) => {
+        -         handle(req)
+        -     }  
+        - }
+        - add getter and setter for the property
+
+    parser/src/utils/multifile.ts (Commit 182c9aa)
+        - when we are constructing an exported object in the parser.ts, besides being able to export a function (existing function) we can now export an ArrowFunction (line 60)
+        - in the above condition we introduce the setter for the _returns property defined in the node.ts, if a FunctionExpression or ArrowFunctionExpression contains a return statement and that return statment is a FunctionExpression or ArrowFunctionExpression we store the expression of the return statment in the _returns property
+        - this new function is the function we are going to use in the mdg instead of the function that encapsules it
+
+    parser/src/parser.ts (Commit 182c9aa)
+        - in the parser.ts we added a map that stores the function that a function returns
+        - this map is then used in cases where a variable is called as a function and within it holds a factory function
+        - const middleware = helper.createMiddleware()
+        - function createMiddleware() {  
+        -     return (req, res) => {
+        -         eval(req)
+        -     }
+        - }
+        - when we're analysing the middleware callNode we will analyse the factoryFunction within createMiddleware 
+
+
+allow detection when returning multiple object properties:
+    detection/queries/query.py (Commit 6f14e10)
+        - agora podemos ter multiple object properties
+        - obj.input.input = userInput
+        - antes tinhamos isto:
+        - CFG de "obj.data = userInput" é:
+            - userInput ->DEP-> obj.data
+            - obj ->SO-> obj.data
+            - obj ->DEP-> RET Obj
+        - agora a única diferença é que podemos ter vários SO ou NV dentre o obj e o obj.data relacionado com o userInput
+
+preProcesser
+
+
+Os fixes que seguem fazem com que o express_app com node_modules dê para detetar
+
+allow ECMAS 2020+ syntax:
+    parser/src/parser.ts ()
+        - change from esprima to espree that supports the latest ECMAS versions as opposed to esprime that only supports ECMAScript 2019 (https://esprima.org/)
+
+
+adicionei um if no retrieveFunctionGraph para não tentar aceder a uma prop que não existe
+    parser/src/utils/multifile.ts
+        - isto já tinha sido adicionado antes para resolver um caso mas só foi aqui que eu percebi no flow normal dos meus findings
+
+fixed error in constructExportObject
+    parser/src/utils/multifile.ts ()
+        - in the latest version of graphjs when a module.exports is assigned to a variable (line 132) and the init variable is null it means we need to find the name of the main variable associated with that identifier (because the identifier is probably a version of the variable)
+        - however this was causing an error because we were still using the identifier of the version when constructing the object instead of using the main variable name (line 153)
+
+added skipping files that are not .js
+    parser/src/parser.ts
+        - 
+
+added await expression handling
+    - there's 2 cases:
+        parser/src/traverse/dependency/dep_builder.ts
+            - variableAssignment: const result = await eval(x)
+                - basically skips the await keyword and calls the handleVariableAssignment with the variable being assigned as right side and the argument of the await (Function Call) as left side
+        parser/src/traverse/normalization/normalizer_utils.ts
+        parser/src/traverse/dependency/dep_builder.ts
+            - no variableAssignment call: await eval(x)
+                - now we have the same behaviour for an await expr as a normal one (change in the normCallExpression)
+                - 
+
+Os fixes que se seguem fazem com que o phantom_seo dê para detetar
+    parser/src/parser.ts
+        - adicionei um map que associa o nome dos modulos (axios) e o seu main file (axios/src/index.js)
+        - isto tem de ser feito para quando tivermos um require('axios'), o parser.ts perceber que o objecto que estamos a ir buscar é o objeto contruido em axios/src/index e não o objecto 'axios', que não existe
+
+deteta quando o argumento de um sink é um obj: eval({ data: userInput })
+    parser/src/traverse/normalization/normalizer_utils.ts
+        - quando normalizamos um ObjectExpression como este "{ data: userInput }":
+        - criamos v1 = {}
+        - v1.data = userInput
+        - no entanto isto só acontecia quando o parent node desde ObjectExpression fosse um punhado (handfull) de tipos (dar exemplo) e CallExpression não era uma delas
+        - simplesmente adicionei para termos uma ligação no MDG entre as duas expressões
+    detection/queries/injection.py
+        - alterei o bottom_up_query_injection para detetar eval({ data: userInput })
+        - CFG de { data: userInput } é:
+            - userInput ->DEP-> obj.data
+            - data ->SO-> obj.data
+            - data ->DEP-> SINK Obj
+        - para o bottom_up_query_injection devolver este exemplo tive de colocar um OR:
+            - como estava antes (exemple de sink normal)
+            OR
+            - exemplo de sink { data: userInput }
+
+
+
+        MATCH
+			(func:VariableDeclarator)-[ref_edge:REF]->(param:PDG_OBJECT)
+			WHERE
+			ref_edge.RelationType = "param"
+
+			OPTIONAL MATCH
+			(param)-[edges:PDG*1..]->(sink_direct:TAINT_SINK)
+			WHERE
+			ALL(edge IN edges WHERE NOT edge.RelationType = "ARG" OR edge.valid = true)
+
+			OPTIONAL MATCH
+			(param)-[edge:PDG]->(prop:PDG_OBJECT)
+					<-[edges1:PDG*1..]-(obj:PDG_OBJECT)
+					-[edge2:PDG]->(sink_indirect:TAINT_SINK)
+			WHERE
+					edge.RelationType = "DEP" AND
+					ALL(
+					edge1 in edges1 WHERE
+					edge1.RelationType in ["SO","NV"] ) AND
+					edge2.RelationType = "DEP"
+
+			WITH func, param, [sink_direct, sink_indirect] AS sinks
+			UNWIND sinks AS sink
+			WITH func, param, sink
+			WHERE sink IS NOT NULL
+
+			MATCH
+			(sink_cfg)-[:SINK]->(sink),
+			(sink_cfg)-[:AST]->(sink_ast)
+
+			RETURN DISTINCT func, param, sink, sink_cfg, sink_ast
