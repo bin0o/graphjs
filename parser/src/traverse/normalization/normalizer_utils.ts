@@ -1125,8 +1125,7 @@ export function normCallExpression(obj: CallExpression, children: Normalization[
 
     if (parent &&
         ((parent.type === "VariableDeclarator" && parent.id.type !== "ArrayPattern") ||
-            parent.type === "AssignmentExpression" ||
-            parent.type === "AwaitExpression")) {
+            parent.type === "AssignmentExpression")) {
         return {
             stmts: [...flatStmts(children), ...stmts],
             expr: newObj
@@ -1181,7 +1180,7 @@ export function normObjectExpression(obj: ObjectExpression, children: Normalizat
     }
 
     if (parent?.type === "Property" || (parent?.type === "AssignmentExpression" && parent.left.type === "MemberExpression") ||
-        parent?.type === "ReturnStatement") {
+        parent?.type === "ReturnStatement" || parent?.type === "CallExpression") {
         const { id, decl } = createVariableDeclaration(createEmptyObject(), obj.loc);
         const newAssignments: ExpressionStatement[] = [];
         // push declarations for each property using accesses to new variable

@@ -31,6 +31,9 @@ function handleExpressionStatement(stmtId: number, stmt: GraphNode, expNode: Gra
             });
             return trackers;
         }
+        case "AwaitExpression":
+            const argumentNode = getASTNode(expNode, "argument");
+            return handleExpressionStatement(stmtId, expNode, argumentNode, config, trackers);
         case "AssignmentExpression": {
             const left = getASTNode(expNode, "left");
             const right = getASTNode(expNode, "right");
@@ -56,19 +59,6 @@ function handleAssignmentExpression(stmtId: number, stmt: GraphNode, left: Graph
             console.trace(`Expression ${left.type} didn't match with case values.`);
             return trackers.clone();
     }
-}
-
-function handleAwaitExpression(stmtId: number, stmt: GraphNode, left : GraphNode, right:GraphNode, config: Config, trackers: DependencyTracker): DependencyTracker {
-    // Get the argument of the await expression (e.g., axios.get(...))
-
-    const argumentNode = getASTNode(right, "argument");
-    
-    if (!argumentNode) {
-        return trackers;
-    }
-
-    // Handle the awaited expression as a variable assignment by delegating to handleVariableAssignment
-    return handleVariableAssignment(stmtId, stmt, left, argumentNode, config, trackers)
 }
 
 /* Evaluate ExpressionStatement -> Assignment Expression (x = e), when left is Identifier */
@@ -113,7 +103,9 @@ function handleVariableAssignment(stmtId: number, stmt: GraphNode, left: GraphNo
             return handleBinaryExpression(stmtId, stmt, leftIdentifier, right, trackers);
         }
         case "AwaitExpression":
-            return handleAwaitExpression(stmtId, stmt, left, right, config, trackers )
+            const argumentNode = getASTNode(right, "argument");
+            // Handle the awaited expression as a variable assignment by delegating to handleVariableAssignment
+            return handleVariableAssignment(stmtId, stmt, left, argumentNode, config, trackers)
         case "UnaryExpression":
         case "ThisExpression":
         case "Identifier": {
