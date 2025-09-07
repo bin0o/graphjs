@@ -33,28 +33,36 @@ class Injection:
 
 	bottom_up_greedy_injection_query = f"""
 		MATCH
-			(func:VariableDeclarator)
-				-[ref_edge:REF]
-					->(param:PDG_OBJECT)
-						-[edges:PDG*1..]
-							->(sink:TAINT_SINK),
-
-			(sink_cfg)
-				-[:SINK]
-					->(sink),
-
-			(sink_cfg)
-				-[:AST]
-					->(sink_ast)
-
+			(func:VariableDeclarator)-[ref_edge:REF]->(param:PDG_OBJECT)
 			WHERE
-				ref_edge.RelationType = "param" AND
-				ALL(
-					edge in edges WHERE
-					NOT edge.RelationType = "ARG" OR
-					edge.valid = true
-				)
-			RETURN *
+			ref_edge.RelationType = "param"
+
+			OPTIONAL MATCH
+			(param)-[edges:PDG*1..]->(sink_direct:TAINT_SINK)
+			WHERE
+			ALL(edge IN edges WHERE NOT edge.RelationType = "ARG" OR edge.valid = true)
+
+			OPTIONAL MATCH
+			(param)-[edge:PDG]->(prop:PDG_OBJECT)
+					<-[edges1:PDG*1..]-(obj:PDG_OBJECT)
+					-[edge2:PDG]->(sink_indirect:TAINT_SINK)
+			WHERE
+					edge.RelationType = "DEP" AND
+					ALL(
+					edge1 in edges1 WHERE
+					edge1.RelationType in ["SO","NV"] ) AND
+					edge2.RelationType = "DEP"
+
+			WITH func, param, [sink_direct, sink_indirect] AS sinks
+			UNWIND sinks AS sink
+			WITH func, param, sink
+			WHERE sink IS NOT NULL
+
+			MATCH
+			(sink_cfg)-[:SINK]->(sink),
+			(sink_cfg)-[:AST]->(sink_ast)
+
+			RETURN DISTINCT func, param, sink, sink_cfg, sink_ast
 		"""
 
 	# Cache the taint propagation information
