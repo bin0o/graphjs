@@ -215,7 +215,6 @@ export function findCorrespondingFile(targetName: string, context: number, track
                 else if (split.length > 1){
                     module = split[0];
                     targetName = "";
-                    propertiesToTraverse.push(...split.slice(1));
                 }
                 else { targetName = ""; }
                 break;
