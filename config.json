@@ -159,40 +159,74 @@
                 ]
             },
             {
-                "sink": "htmlToPdf",
-                "type": "function",
-                "args": [ 1 , 2 ]
-            },
-            {
                 "sink": "get",
                 "type": "function",
-                "args": [ 1 , 2 ]
-            },
-            {
-                "sink": "open",
-                "type": "function",
-                "args": [ 1 ]
-            },
-            {
-                "sink": "call",
-                "type": "function",
-                "args": [ 1, 2, 3 ]
-            },
-            {
-                "sink": "request",
-                "type": "function",
-                "args": [ 1, 2]
+                "args": [ 1 ],
+                "cause": ["axios@1.7.2", "remark-images-download@3.0.1"]
             },
             {
                 "sink": "connect",
                 "type": "function",
-                "args": [ 1, 2]
+                "args": [ 1 , 2 , 3 ],
+                "cause": "ftp-srv@4.3.4"
+            },
+            {
+                "sink": "spawn",
+                "type": "function",
+                "args": [ 1 , 2 ],
+                "cause": "node-pdf-generator@0.0.6"
+            },
+            {
+                "sink": "open",
+                "type": "function",
+                "args": [ 1 ],
+                "cause": "phantom@1.0.0"
+            },
+            {
+                "sink": "goto",
+                "type": "function",
+                "args": [ 1 , 2 ],
+                "cause": "jsreport@2.5.0"
             },
             {
                 "sink": "navigate",
                 "type": "function",
-                "args": [ 1, 2]
+                "args": [ 1 ],
+                "cause": "html-pdf-chrome@0.6.0"
+            },
+            {
+                "sink": "init",
+                "type": "function",
+                "args": [ 1 ],
+                "cause": "request@2.88.2",
+                "detection": false
+            },
+            {
+                "sink": "dispatch",
+                "type": "function",
+                "args": [ 1 , 2 , 3 ],
+                "cause": "undici@5.8.0"
+            },
+            {
+                "sink": "setContent",
+                "type": "function",
+                "args": [ 1 , 2 , 3 ],
+                "cause":
+                ["sv2png@4.1.1", "osm-static-maps"]
+            },
+            {
+                "sink": "got",
+                "type": "function",
+                "args": [ 1 , 2 ],
+                "cause": ["ghost@3.5.2", "rsshub@1.0.0-master.ab2f618"]
+            }, 
+            {
+                "sink": "request",
+                "type": "function",
+                "args": [ 1 , 2 ],
+                "cause": ["@uppy/companion@1.8.0", "terriajs-server@2.7.3"]
             }
+
         ]
     },
     "sources": [
