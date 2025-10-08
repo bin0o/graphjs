@@ -44,13 +44,13 @@ class Injection:
 
 			OPTIONAL MATCH
 			(param)-[edge:PDG]->(prop:PDG_OBJECT)
-					<-[edges1:PDG*1..]-(obj:PDG_OBJECT)
+					-[edges1:PDG*1..5]-(obj:PDG_OBJECT)
 					-[edge2:PDG]->(sink_indirect:TAINT_SINK)
 			WHERE
 					edge.RelationType = "DEP" AND
 					ALL(
 					edge1 in edges1 WHERE
-					edge1.RelationType in ["SO","NV"] ) AND
+					edge1.RelationType in ["SO","NV"] OR (NOT edge1.RelationType = "ARG" OR edge1.valid = true) ) AND
 					edge2.RelationType = "DEP"
 
 			WITH func, param, [sink_direct, sink_indirect] AS sinks
