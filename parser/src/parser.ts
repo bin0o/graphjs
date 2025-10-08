@@ -35,14 +35,23 @@ function parse(filename: string, config: Config, fileOutput: string, silentMode:
             }
         }
 
+        // Skip only non-JS (keep .js, .mjs, .cjs)
+        const ext = path.extname(filename);
+        if (!['.js', '.mjs', '.cjs'].includes(ext)) {
+            throw new Error(`Unsupported extension for parser: ${ext}`);
+        }
+
         let fileContent: string = fs.readFileSync(filename, "utf8");
         // Remove shebang line
         if (fileContent.slice(0, 2) === "#!") fileContent = fileContent.replace(/^#!(.*\r?\n)/, '\n')
 
+        // Decide sourceType per file (ESM vs CJS)
+        const sourceType = resolveSourceType(filename, fileContent);
+
         // Parse AST
         const ast = espree.parse(fileContent, {
             ecmaVersion: 'latest',
-            sourceType: 'module',
+            sourceType, // <-- per-file type
             loc: true
         }) as unknown as Program;
         //const ast = esprima.parseModule(fileContent, { loc: true, tolerant: true });
@@ -89,6 +98,40 @@ function parse(filename: string, config: Config, fileOutput: string, silentMode:
     return [new Graph(null), new DependencyTracker(new Graph(null), new Map<number, number[]>())];
 }
 
+// Choose ESM/CJS per file
+function resolveSourceType(filePath: string, fileContent: string): 'module' | 'script' {
+    const ext = path.extname(filePath);
+    if (ext === '.mjs') return 'module';
+    if (ext === '.cjs') return 'script';
+
+    // For .js follow nearest package.json type, then heuristics
+    const pkgType = findNearestPackageType(path.dirname(filePath));
+    if (pkgType === 'module') return 'module';
+
+    // Heuristic: look for top-level import/export
+    // (cheap, good enough; the normalizer will run afterward)
+    const seemsESM = /^\s*(import\s+[\s\S]+?from\s+|import\s*\(|export\s)/m.test(fileContent);
+    return seemsESM ? 'module' : 'script';
+}
+
+function findNearestPackageType(dir: string): 'module' | 'commonjs' | null {
+    try {
+        let curr = dir;
+        while (curr && curr !== path.dirname(curr)) {
+            const pkgPath = path.join(curr, 'package.json');
+            if (fs.existsSync(pkgPath)) {
+                const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf8'));
+                if (pkg && typeof pkg.type === 'string') {
+                    return pkg.type === 'module' ? 'module' : 'commonjs';
+                }
+                return null;
+            }
+            curr = path.dirname(curr);
+        }
+    } catch { /* ignore */ }
+    return null;
+}
+
 function isNodeModule(dep: string): boolean {
     return dep.includes("node_modules/")
 }
@@ -123,7 +166,8 @@ function traverseDependencyGraph(depGraph: any, config: Config, normalizedOutput
         let cpg = new Graph(null);
         for (const [file, childDepGraph] of Object.entries(depGraph)) { // first parse its dependencies
             // skip empty dependencies or already parsed files
-            if (exportedObjects.has(file) || file.slice(-3) != ".js") continue;
+            const ext = path.extname(file);
+            if (exportedObjects.has(file) || (ext !== ".js" && ext !== ".cjs" && ext !== ".mjs")) continue;
             [cpg, nodeCounter, edgeCounter, trackers] = traverse(file, childDepGraph, config, normalizedOutputDir, silentMode, exportedObjects, nodeCounter, edgeCounter);
         }
 
