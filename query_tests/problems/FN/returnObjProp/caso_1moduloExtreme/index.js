@@ -1,5 +1,6 @@
 function g(userInput) {
-  data.input = userInput;
+  const data = {};
+  data.input1 = userInput;
   return data;
 }
 

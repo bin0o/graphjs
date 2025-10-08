@@ -1,7 +1,5 @@
 function g(userInput) {
-  const data = {};
-  data.input1 = {};
-  data.input1.input2 = userInput
+  const data = {input1: {input2: userInput}}
   return data;
 }
 
