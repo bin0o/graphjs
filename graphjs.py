@@ -235,7 +235,7 @@ def run_graph_js(file_path, output_path, query_type, with_types=False, generate_
 
     # Execute Graph Traversals (Queries)
     print("[STEP 2] Queries: Importing the graph...")
-    run_queries(processed_file_path, graph_output, run_output, summary_path, time_output,
+    run_queries(file_path, graph_output, run_output, summary_path, time_output,
                 (with_types or generate_exploit), query_type, optimized)
     print("[STEP 3] Queries: Completed.")
 
