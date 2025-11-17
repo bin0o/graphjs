@@ -225,6 +225,85 @@ export function findCorrespondingFile(targetName: string, context: number, track
     return [module, propertiesToTraverse];
 }
 
+
+// find the corresponding file for the given targetName, even if we're calling a sub object of a module
+// export function findCorrespondingFile(targetName: string, context: number, trackers: DependencyTracker): Map<string|undefined, string[]> {
+//     let modules;
+
+//     const inverted: Map<string, string[]> = new Map();
+
+//     const modulesFile: Map<string|undefined, string[]> = new Map();
+
+//     if (trackers.requireChain.size != 0) {
+//         for (const [key,values] of trackers.requireChain) {
+//         for (const value of values) {
+//             const splitVal = value.split(".")[0];
+//             if (!inverted.has(splitVal)) {
+//                 inverted.set(splitVal, []);
+//             }
+//             inverted.get(splitVal)?.push(key);
+//             }
+//         }
+//     }
+
+//     //if (trackers.requireChain.size != 0) {
+// //         for (const [key,values] of trackers.requireChain) {
+// //         for (var value of values) {
+// //             value = value.replace('_','');
+// //             if (!inverted.has(value)) {
+// //                 inverted.set(value, []);
+// //             }
+// //             inverted.get(value)?.push(key);
+// //             }
+// //         }
+// //     }
+
+//     do {
+//         const contexts = trackers.getPossibleObjectContexts(targetName, context);
+//         for (const context of contexts) {
+//             const splitContext = context.split(".");
+
+//             modules = inverted.get(splitContext[0]);
+
+//             //for (var [key, _] of inverted) {
+// //                 if (context.includes(key)){
+// //                     modules = inverted.get(key);
+// //                     break;
+// //                 }
+// //             }
+//             if (modules) {
+//                 for (let module of modules){
+//                     module = module.startsWith('./') ? module.substring(2) : module;
+//                     // if we're dealing with a subObject with need to find the parent object
+//                     // holds the module (thus we iterate again)
+//                     const split = module.split(".");
+                    
+//                     if (split.length > 2) {
+//                         targetName = split[0];
+//                         if (!modulesFile.has(module)) {
+//                             modulesFile.set(module, []);
+//                         }
+//                         modulesFile.get(module)?.push(...split.slice(1));
+//                     } 
+//                     else if (split.length > 1){
+//                         module = split[0];
+//                         targetName = "";
+//                     }
+//                     else { 
+//                         targetName = ""; 
+//                     }
+//                     if (!modulesFile.has(module)) {
+//                         modulesFile.set(module, []);
+//                     }
+//                 }
+//                 break;
+//             }
+//         }
+//     } while (modules && targetName !== "");
+
+//     return modulesFile;
+//}
+
 // Function to print dependency graph to file
 export function printDependencyGraph(tree: any, filename: string): void {
     // Helper function to recursively build adjacency list

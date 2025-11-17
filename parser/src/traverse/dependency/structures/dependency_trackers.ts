@@ -29,7 +29,7 @@ export class DependencyTracker {
     // This value represents the current context stack
     private intraContextStack: number[];
     // This value represents chains of "require" dependencies
-    private requireChain: RequireChain;
+    public requireChain: RequireChain;
     // This value represents chains of lazy "require" dependencies
     private lazyRequireChain: LazyRequires;
     // This value represents a map of variable name to package name

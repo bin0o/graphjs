@@ -278,6 +278,102 @@ function traverseDependencyGraph(depGraph: any, config: Config, normalizedOutput
             }
         });
 
+        // add the exported functions to cpg to generate the final graph
+        // trackers.callNodesList.forEach((callNode: GraphNode) => {
+        //     const { calleeName, functionName } = getFunctionName(callNode);
+
+        //     const modulesFile: Map<string|undefined, string[]> = findCorrespondingFile(calleeName, callNode.functionContext, trackers);
+        //     for (const [module, properties] of modulesFile) {
+        //         modulesFile.get(module)?.push(functionName);
+        //     }
+
+        //     if (modulesFile.size === 0){
+        //         for (const [key, value] of returnedFunctionMap.entries()) {
+        //             // if the returnNode identifier (key) includes the functionName it means that this variable holds a functionFactory
+        //             if (key?.includes(functionName)){
+        //                 // use the stored values so the functionFactory node is used
+        //                 module = value[0];
+        //                 modulesFile.set(module, [value[1]])
+        //                 break;
+        //             }
+        //         }
+        //     }
+        //     for (var [module, propertiesToTraverse] of modulesFile) {
+        //         // module being undefined may mean that a variable without module (middleware) is being called because it holds a functionFactory
+        //         // e.g. const middleware = helper.createMiddleware()
+    
+        //         if (module) { // external call
+        //             let originalNodeModuleName = null
+        //             if (nodeModuleMainMap.has(module)){
+        //                 originalNodeModuleName = module
+        //                 module = nodeModuleMainMap.get(module)
+        //             }
+        //             else {
+        //                 module = path.join(dir, module);
+        //             }
+        //             var exportedObj:any = [];
+        //             if (module){
+        //                 exportedObj = exportedObjects.get(module);
+        //             }
+    
+        //             if (!exportedObj || Object.keys(exportedObj).length === 0) return;
+    
+        //             const funcGraph: GraphNode | undefined = retrieveFunctionGraph(exportedObj, propertiesToTraverse);
+    
+        //             if (funcGraph) {
+        //                 // store the function that the funcGraph node returns because that is the function that the code will run
+        //                 // e.g. function createMiddleware() {  
+        //                 //          return (req, res) => {
+        //                 //              handle(req)
+        //                 //          }
+        //                 //      }
+        //                 const trueFuncGraph = funcGraph.returns ?? funcGraph;
+    
+        //                 if (funcGraph.returns) {
+        //                     const returnEdge = callNode.edges.find(
+        //                     e => e.type === "PDG" && e.label === "RET"
+        //                     );
+            
+        //                     if (returnEdge) {
+        //                         // retrieve the identifier of the node where the function is being assigned to
+        //                         // e.g. const middleware = helper.createMiddleware(), in thus example the returnNode is the node related to middleware
+        //                         const returnNode = returnEdge.nodes.find( 
+        //                             n=> n.type === "PDG_OBJECT"
+        //                         )
+        //                         // This function returns another function
+        //                         const functionFactory = [];
+        //                         // store the values in the map
+        //                         if (module){
+        //                             functionFactory.push(path.basename(originalNodeModuleName ?? module),functionName)
+        //                         }
+        //                         returnedFunctionMap.set(returnNode?.identifier,functionFactory)
+        //                     }
+        //                 }   
+    
+        //                 // Use the final resolved function (original or returned) for CG/ARG construction
+        //                 cpg.addExternalFuncNode(`function ${module}.${trueFuncGraph.identifier ?? ""}`, trueFuncGraph);
+    
+        //                 const params = trueFuncGraph.edges
+        //                     .filter((e: GraphEdge) => e.label === "param")
+        //                     .map((e: GraphEdge) => e.nodes[1]);
+    
+        //                 // connect object arguments to the parameters of the external function
+        //                 callNode.argsObjIDs.forEach((args: number[]) => {
+        //                     args.forEach((arg: number, index) => {
+        //                         if (arg !== -1 && params[index + 1]) { // if the argument is a constant its value is -1 (thus literals aren't considred here)
+        //                             cpg.addEdge(arg, callNode.id, { type: "PDG", label: "ARG", objName: params[index + 1].identifier });
+        //                         }
+        //                     });
+        //                 });
+    
+        //                 cpg.addEdge(callNode.id, trueFuncGraph.id, { type: "CG", label: "CG" });
+        //             }
+        //         }
+
+        //     }
+
+        // });
+
         edgeCounter = cpg.number_edges;
 
         return [cpg, nodeCounter, edgeCounter, trackers];
