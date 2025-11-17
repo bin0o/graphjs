@@ -1,6 +1,6 @@
 function f(userInput) {
     let result = {data: userInput}
-    eval(result)
+    eval(result.data)
 }
 
 module.exports = {f}

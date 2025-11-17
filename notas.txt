@@ -1,9 +1,7 @@
 --------------------------------------------------------------------
 Reunião 18/03
 Dúvidas:
-  - Todos os packages podem acabar por estar também no dataset de aplicações. O que é que caracterizamos só como packages e como apps? packages criados são para benchmarks e verdadeiras são para ultimo dataset
-  - Preferível ter tudo num container para aceder pelo localhost? não
-  - O que fazer agora?
+
 
 Durante:
 comprar domain (dominios.pt) e usar letsEncrypt
@@ -12,33 +10,28 @@ entry point e sinks
 -----------------------------------------------------------------------
 Reunião 25/03
 Dúvidas:
-  - Consideramos como sink o request ou quando damos log do req? req
-  - axios sink.
+
+Durante: (revisitar)
   - osm-static-maps ssrf não está resolvido
   - fuxa não tem patch por isso 1.2.4 ainda é vuln
   - ssrf-agent não está resolvido
   - ssrf-agent não tem sink porque isto é má validação que resulta em SSRF
   - jsreport ainda é vulneravel
-
-Durante:
  - ngrok
  - quando tenho app guardar as 2 sources (app e pac) e 2 sinks; function call dentro da app;
  - experimentar versoes atuais osm-static-maps (4.2.0)
 
 -----------------------------------------------------------------------
 Reunião 01/04
-Dúvidas:
+
+Durante: (revisitar)
   - osm-static-maps ssrf não está resolvido no 3.10.1 mas 3.11.0 o download não funciona
   - jsreport ainda é vulneravel
-
-Durante:
   
 
 -----------------------------------------------------------------------
 Reunião 08/04
 Dúvidas:
-  - desmotivado
-  - o que fazer a seguir?
 
 Durante:
   - 1ºpasso:
@@ -56,8 +49,6 @@ Durante:
 -----------------------------------------------------------------------
 Reunião 24/04
 Dúvidas:
-    - que sources e sinks posso colocar?
-    - manter query de injection inicialmente ou fazer já uma coisa elaborada?
   
 Durante:
   - fazer novas classes para nova query, baseada na injection (alterar sinks e sources)
@@ -65,23 +56,12 @@ Durante:
 
 -----------------------------------------------------------------------
 Reunião 08/05
-Dúvidas:
-    - no folder problems temos exemplos em que não deteta no mesmo file mas deteta em files diff, e acho que devia detetar (ping guilherme)
-    - deteta vuln no intra_injection/not_flagged/input/case2 quando não devia detetar (normal)
-    - já tenho alguns exemplos feitos para ssrf (2 vulns diff no unidici)
-    - há casos em que não só é necessario um sink como também uma options especifica
-    - preciso do dataset anotado porque não sei qual é a norma para processar multiplos files
-    - caso da maquina que o stor deu
+
 
 -----------------------------------------------------------------------
 
 Reunião 15/05
 Dúvidas:
-    - axios (o problema é na sanitização)
-    - há um teste que verifica secure_return_caller e de facto não há vuln reportadas mas quando são files diff deteta
-    - queria a lista anotada para saber como está a estrutura dos modulos 
-    - num dos ultimos commits eles colocaram uma opção para analisar todo o dataset (vulcan, secbench, etc), mas não colocaram no github os tais datasets
-
 
 Durante:
     - marcar como vulnerabilidade e passou numa potencial sanitização
@@ -178,10 +158,6 @@ Reunião 20/06
     - Consegui detetar a app mas tenho problema no await
 
   Dúvidas: 
-    - await 
-    - factory function no appToModule
-    - papel que o colega lhe vai dar
-    - criar outra key para login na vm
 
 
   Durante:
@@ -226,10 +202,7 @@ Reunião 17/07
     - criar app com modulo testado pelo guilherme para testar
 
   Dúvidas: 
-    - Para criar o processed_output dentro do output tenho de colocar todos os outros ficheiros dentro do processed para o grafo ser feito, ora isto leva tempo
-        - 2 soluções:
-            - criar o processed dentro do input e assim não tenho de copiar ficheiros
-            - copiar apenas os ficheiros required pelos ficheiros de forma recursiva (mais dificil)
+
 
 
   Durante:
@@ -276,20 +249,15 @@ Reunião 31/07
     - passei app.use() para chained middleware
 
   Falta:
-    - Passar app.use quando é especifico para um route
-    - parsar os metadados dos sinks e sources
-    - encontrar falso positivo
-    - testar o dataset
-    - começar graphjs de novo e ir adicionando coisas e testando para ter uma lista de alterações correta e testes que o comprovem
 
   Durante: 
     - verificar chain operator
     - verificar flag silent
     - diferença entre espree e esprima
 
-    -----------------------------------------------------------------------
+-----------------------------------------------------------------------
 
-Reunião 01/09
+Reunião 04/09
 
   Trabalho: 
     - lista de todas as alterações que fiz ao graph.js
@@ -302,73 +270,124 @@ Reunião 01/09
     - tentei resolver caso html-pdf-chrome
 
   Falta:
-    - verifica melhor o FP do helper.g 
-    - verificar chain operator
-    - awaiter (muito dificil)
-    - parsar os metadados dos sinks e dos sources (preProcesser.py)
-    - escrever a partir do finding await
-    - rever dataset
-    - recomeçar no dataset onde primeiro vais rever os sinks todos e os PoC (isto depende de como está a escrita)
-    - perguntar ao andré sobre await
-    - normObj por causa do data = {input2: {input1: userInput}}
-    - perguntar ao chat sobre data.input.input = userInput
+
 
   Dúvida:
-    - explico com exemplos simplificados mesmo tendo encontrado os erros por causa das app
+    -
 
   Durante: 
 
-    
-  Ideias Escrita:
-    - antes da implementação escrever uma história por ordem cronologica dos meus findings, (primeiro testei as queries deles, depois as minhas e depois o dataset) e que mudanças foram surgindo com isso
-      - na implementação escrever por secções ( overall fixes/features or ssrf fixes/features) e se calhar separar ainda no preProcesser
-      - outra ideia que se pode fazer é separar por módulos como fizemos no PIC, preProcesser, modulo de criação de MDG e modulo de deteção
-    - houve muitos fixes que vieram por causa dos exemplos do dataser, simplifico e digo que vi os exemplos e criei exemplos mais simples ou uso os exemplos do dataset para lhes explicar?
-    - sinto que aqui podemos simplificar mas depois retirar alguns exemplos para explicar que as mudanças que fiz fizeram com que detetasse
+-----------------------------------------------------------------------
+
+Reunião 11/09
+
+  Trabalho: 
+    - estrutura da tese
+    - pedir para criar overleaf  
+    - verifica melhor o FP do helper.g (o porquê de acontecer está em comentátio no helper.g)
+    - normObj por causa do const data = {input2: {input1: userInput}} (neste normObj falta o const )
+    - perguntar ao chat sobre data.input.input = userInput (isto não funciona)
+    - perguntar ao andré sobre await
 
 
-  exemplos queries -> exemplos modulos dataset -> preProcesser -> exemplos app dataset
-
-  Dataset:
-    axios: não deteta sink do modulo (rever)
-    cors: não
-    directus: sem PoC no dataset
-    ftp-srv: PoC não está acabado
-    fuxa: sem PoC no dataset
-    ghost: sem PoC no dataset
-    google-translate-api-browser: sem sink no modulo
-    html-pdf-chrome: não consigo detetar por causa de awaiter
-    jsreport: sem PoC 
-    kibana: sem PoC
-    kityminder: sem PoC
-    link-preview: não consigo detetar por causa de awaiter
-    node-pdf-app: não consigo detetar por causa do args.push() :(
-    phantomjs-seo: consigo huhuhuhu, rever parentesis que lixa o phantomjs
-    rendertron: não tenho PoC
-    request: rever
-    
+  Falta:
 
 
+  Dúvida:
+    - 
+
+  Durante: 
+    - não preciso da descrição da solução na proposed sol, na arquitetura explico cada componente
+    - começar por implementação
+    - perghuntr ao gui pelo collected
+    - testar collected
+
+-----------------------------------------------------------------------
+
+Reunião 17/09
+
+  Trabalho: 
+    - perguntar ao gui pelo collected
+
+  Falta:
+
+-----------------------------------------------------------------------
+
+Reunião 25/09
+
+  Trabalho: 
+    - testei o vulcan com tudo modificado (testar só o pacote inteiro em vez dos files todos):
+        - com um graphjs que tinha testado
+        - com um commit go meu graphjs em que tinha obtido bons results
+        - com o que tinha até há 2 dias
+        - com o que tenho agora (adicionei umas coisas às queries e no parser)
+    - estou neste momento a testar o vulcan e o secbench para o gui e o new com as últimas alteracao
+    - dataset todo anotado
+    - já a ver qual deles deteto
+    - adicionei umas coisas no parser para detetar .cjs
+    - o casoSpecificObjProp e casoSpecificObjProjWithRet não eram detetados e consegui dar fix, no entanto ao dar fix ao segundo o tempo de deteção aumenta muito não permitindo a deteção
+    - consegui resolver os erros quando temos um const result = funcao(param), o result é agora tainted também (isto acontece no ftp-srv e no node-pdf-app)
 
 
-final:
- 1. dataset (tudo anotado)
- 2. parser que pega em app e converte em modulo (e passar depois de modulo para ser usado em app)+ metadata linhas
- 3. parsar todas as apps do dataset em modulos
- 4. correr o graphjs nos modulos
- 5. validar que as vulns são corretas
- 6. (opcional) mostrar equivalencia funcional
+  Falta:
+
+  Dúvida:
+
+  Durante: 
 
 
+-----------------------------------------------------------------------
 
 
+Reunião 17/10 (Reunião sobre adiar a Tese)
 
-TODO
-- entry point e sinks
-- ver os que não fiz
-- passar os que não têm docker para docker
+  Opções:
+    - até maio:
+        - melhorar muita coisa
+    - ASAP:
+        - melhorar preprocessor
+        - melhorar dataset
+        - add dataset to explodeJS
 
-REVER:
-- ssrf-agent não está resolvido
-- ssrf-agent não tem sink porque isto é má validação que resulta em SSRF
+  Notas:
+    - é como eu quiser
+    - o meu trabalho foi bom e tive boa determinação
+    - perceber o timeline que faz sentido??
+
+
+  Trabalho: 
+    - testar os casos rodeados (quase todos são infinitos)
+    - testar tudo com intra + bottom_up (deu merda por causa do prot pollution)
+    - ver se script dá para ver FN também quando não deteta todos os do expected file (já tenho isso a funcionar e no geral também resulta)
+    - intra injection já deteta com objs (result.data)
+    - voltar a retirar os timeouts e a fazer o gráfico (percebi que prot pol foi tudo à vida)
+
+
+  Durante: 
+    - fazer script para verificar onde estão fp e tp
+    - elaborar já RQ:
+      - ver se deteta SSRF
+      - diff entre SSRF e injection
+      - diff entre modulo e app
+
+
+-----------------------------------------------------------------------
+
+Reunião 20/11:
+
+  Trabalho: 
+   - no 654 chama só 1; pode ser por causa da query (exists) : resolvi mas não da melhor forma, chamar o filipe e apresentar tanto esta como todas as minhas mudanças
+   - fazer script para dar backtrace se a minha mudança alterou alguma coisa
+   - juntar intra com bottom_up: não é necessário visto já detetar (não deteta sem const)
+   - qual é o common ground entre os 3 models (e depois especificar cada diff entre os 3): 
+
+  Notas:
+    - 
+
+  A fazer:
+    - 
+  
+  Trabalho:
+    - 
+
 

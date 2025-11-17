@@ -29,7 +29,7 @@ allow requiring function of module instead of whole module
         - because the parser does not recognize the function g as g but as helper.g
         - workCase works because the propagation query is independent of the above error
 
-        - this was changed again, não precisamos de adicionar o nome ao propertiesToTraverse
+        - this was changed again, não precisamos de adicionar o nome ao propertiesToTraverse e por isso não já não dá erro no retrieveFunctionGraph
 
 allow functions to return factory functions
     detection/queries/query.py (Commit bc768f2)
@@ -133,36 +133,5 @@ deteta quando o argumento de um sink é um obj: eval({ data: userInput })
             OR
             - exemplo de sink { data: userInput }
 
-
-
-        MATCH
-			(func:VariableDeclarator)-[ref_edge:REF]->(param:PDG_OBJECT)
-			WHERE
-			ref_edge.RelationType = "param"
-
-			OPTIONAL MATCH
-			(param)-[edges:PDG*1..]->(sink_direct:TAINT_SINK)
-			WHERE
-			ALL(edge IN edges WHERE NOT edge.RelationType = "ARG" OR edge.valid = true)
-
-			OPTIONAL MATCH
-			(param)-[edge:PDG]->(prop:PDG_OBJECT)
-					<-[edges1:PDG*1..]-(obj:PDG_OBJECT)
-					-[edge2:PDG]->(sink_indirect:TAINT_SINK)
-			WHERE
-					edge.RelationType = "DEP" AND
-					ALL(
-					edge1 in edges1 WHERE
-					edge1.RelationType in ["SO","NV"] ) AND
-					edge2.RelationType = "DEP"
-
-			WITH func, param, [sink_direct, sink_indirect] AS sinks
-			UNWIND sinks AS sink
-			WITH func, param, sink
-			WHERE sink IS NOT NULL
-
-			MATCH
-			(sink_cfg)-[:SINK]->(sink),
-			(sink_cfg)-[:AST]->(sink_ast)
-
-			RETURN DISTINCT func, param, sink, sink_cfg, sink_ast
+TODO: falta explicar como resolvemos o axios e o short hand syntax
+    explicar como detetamos specific file type (.js, .mjs, .cjs)

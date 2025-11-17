@@ -3,6 +3,7 @@ parser/if.json
 parser/coverage/*
 parser/built/*
 parser/src/graphs/*
+parser/package-lock.json
 
 instrumentation/node_modules/*
 
@@ -38,4 +39,4 @@ datasets/
 
 output/
 
-parser/package-lock.json
+/backtrace

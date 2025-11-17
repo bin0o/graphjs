@@ -4,7 +4,7 @@ function g(userInput) {
 }
 
 function f(x) {
-  eval(g(x))
+  eval(g(x).input1.input2);
 }
 
 module.exports = {f}
