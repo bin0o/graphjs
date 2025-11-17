@@ -117,3 +117,82 @@ class Injection:
 			self.query.time_reconstruction("injection")
 
 		return vuln_paths
+	
+
+
+
+
+# def find_vulnerable_paths(self, session, vuln_paths, source_file, filename: str, detection_output, query_type, config):
+# 		print(f'[INFO] Running injection query.')
+# 		self.query.start_timer()
+
+# 		# decide which queries to run (order matters: intra first)
+# 		runs = []
+# 		if query_type == 'intra':
+# 			runs = [('intra', self.intra_injection_query)]
+# 		elif query_type == 'bottom_up_greedy':
+# 			runs = [('bottom_up_greedy', self.bottom_up_greedy_injection_query)]
+# 		elif query_type == 'both':
+# 			runs = [
+# 				('intra', self.intra_injection_query),
+# 				('bottom_up_greedy', self.bottom_up_greedy_injection_query),
+# 			]
+# 		else:
+# 			return vuln_paths  # unknown type, nothing to do
+
+# 		detection_results = []
+# 		# seen signature to avoid duplicates across both queries
+# 		# (file, sink_lineno, sink_cfg_id) is a good stable key
+# 		seen = set()
+
+# 		for qt, cypher in runs:
+# 			results = session.run(cypher)
+
+# 			for record in results:
+# 				# keep your original filtering: confirm_vulnerability only for bottom_up
+# 				if qt == "bottom_up_greedy" and not self.query.confirm_vulnerability(session, record["func"]["Id"], record["param"]):
+# 					continue
+
+# 				sink_name = record["sink"]["IdentifierName"]
+# 				sink_loc = json.loads(record["sink_ast"]["Location"])
+# 				sink_lineno = sink_loc["start"]["line"]
+# 				file = sink_loc["fname"]
+# 				sink = my_utils.get_code_line_from_file(file, sink_lineno)
+# 				vuln_type: str = my_utils.get_injection_type(sink_name, config)
+
+# 				sig = (file, sink_lineno, record["sink_cfg"]["Id"])
+# 				if sig in seen:
+# 					continue
+# 				seen.add(sig)
+
+# 				# keep query_type tagged so you can see how it was found
+# 				vuln_path = {
+# 					"filename": file,
+# 					"vuln_type": vuln_type,
+# 					"sink": sink,
+# 					"sink_lineno": sink_lineno,
+# 					"sink_function": record["sink_cfg"]["Id"],
+# 					"query_type": qt
+# 				}
+
+# 				my_utils.save_intermediate_output(vuln_path, detection_output)
+
+# 				if not self.query.reconstruct_types:
+# 					if vuln_path not in vuln_paths:
+# 						vuln_paths.append(vuln_path)
+# 				else:
+# 					if vuln_path not in detection_results:
+# 						detection_results.append(vuln_path)
+
+# 		self.query.time_detection("injection")
+
+# 		if self.query.reconstruct_types:
+# 			print(f'[INFO] Reconstructing attacker-controlled data.')
+# 			for detection_result in detection_results:
+# 				vulnerabilities = interaction_protocol.get_vulnerability_info(session, detection_result, source_file, config)
+# 				for detection_obj in vulnerabilities:
+# 					if detection_obj not in vuln_paths:
+# 						vuln_paths.append(detection_obj)
+# 			self.query.time_reconstruction("injection")
+
+# 		return vuln_paths
