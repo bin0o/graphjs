@@ -50,18 +50,34 @@ class Query:
 						edge in edges WHERE
 						NOT edge.RelationType = "ARG" OR
 						edge.valid = true
-					)	
+					)
 
-				OPTIONAL MATCH
-					(param)-[edge:PDG]->(prop:PDG_OBJECT)
-					-[edges1:PDG*1..5]-(obj:PDG_OBJECT)
-					-[edge2:PDG]->(indirectReturn:PDG_RETURN)
-				WHERE
-						edge.RelationType = "DEP" AND
-						ALL(
-						edge1 in edges1 WHERE
-						(edge1.RelationType in ["SO","NV"]) OR (NOT edge1.RelationType = "ARG" OR edge1.valid = true) ) AND
-						edge2.RelationType = "DEP"
+				OPTIONAL MATCH	
+					(param)-[edges4:PDG*0..5]->(paramProp:PDG_OBJECT)-[edge1:PDG]->(obj:PDG_OBJECT) 
+						WHERE ALL(edge4 in edges4 WHERE NOT edge4.RelationType = "ARG" OR edge4.valid=True) AND edge1.RelationType = "DEP"
+
+				OPTIONAL MATCH 
+					(obj)-[edges1:PDG*1..5]-(objSONV:PDG_OBJECT) 
+						WHERE ALL( edge1 in edges1 WHERE edge1.RelationType in ["SO","NV"] OR edge1.valid = true)
+
+					WITH obj, return, func, param, objSONV,
+					
+						split(reduce(s = "", p IN split(objSONV.IdentifierName, '.')[1..] |
+						CASE WHEN s = "" THEN p ELSE s + "." + p END),'-')[0] AS taintedObjName,
+
+						split(reduce(s = "", p IN split(obj.IdentifierName, '.')[1..] |
+						CASE WHEN s = "" THEN p ELSE s + "." + p END),'-')[0] AS taintedPropName 
+
+					WHERE objSONV IS NULL OR taintedPropName CONTAINS taintedObjName
+
+					WITH
+						coalesce(objSONV, obj) AS obj,
+						return, func, param
+
+				OPTIONAL MATCH 
+					(obj)-[edge2:PDG]->(indirectReturn:PDG_RETURN) 
+
+					WHERE edge2.RelationType = "DEP" OR edge2.valid = true	
 
 				WITH 
 					param,
@@ -85,6 +101,73 @@ class Query:
 
 				RETURN *
 			"""
+
+			# MATCH 
+			# 		(func:VariableDeclarator)
+			# 			-[:REF]
+			# 				->(param:PDG_OBJECT)
+								
+			# 		WHERE 
+			# 			func.Id = \"{func}\"
+
+			# 	OPTIONAL MATCH 
+			# 			(param)
+			# 			-[edges:PDG*1..]
+			# 				->(return:PDG_RETURN)
+			# 			WHERE ALL(
+			# 			edge in edges WHERE
+			# 			NOT edge.RelationType = "ARG" OR
+			# 			edge.valid = true
+			# 		)
+
+			# 	OPTIONAL MATCH	
+			# 		(param)-[edges4:PDG*0..5]->(paramProp:PDG_OBJECT)-[edge1:PDG]->(obj:PDG_OBJECT) 
+			# 			WHERE ALL(edge4 in edges4 WHERE NOT edge4.RelationType = "ARG" OR edge4.valid=True) AND edge1.RelationType = "DEP"
+
+			# 	OPTIONAL MATCH 
+			# 		(obj)-[edges1:PDG*1..5]-(objSONV:PDG_OBJECT) 
+			# 			WHERE ALL( edge1 in edges1 WHERE edge1.RelationType in ["SO","NV"] OR edge1.valid = true)
+
+			# 		WITH obj, return, func, param, objSONV,
+					
+			# 			split(reduce(s = "", p IN split(objSONV.IdentifierName, '.')[1..] |
+			# 			CASE WHEN s = "" THEN p ELSE s + "." + p END),'-')[0] AS taintedObjName,
+
+			# 			split(reduce(s = "", p IN split(obj.IdentifierName, '.')[1..] |
+			# 			CASE WHEN s = "" THEN p ELSE s + "." + p END),'-')[0] AS taintedPropName 
+
+			# 		WHERE objSONV IS NULL OR taintedPropName CONTAINS taintedObjName
+
+			# 		WITH
+			# 			coalesce(objSONV, obj) AS obj,
+			# 			sink_direct, func, param
+
+			# 	OPTIONAL MATCH 
+			# 		(obj)-[edge2:PDG]->(indirectReturn:PDG_RETURN) 
+
+			# 		WHERE edge2.RelationType = "DEP" OR edge2.valid = true	
+
+			# 	WITH 
+			# 		param,
+			# 		coalesce(return, indirectReturn) AS ret,
+			# 		obj
+
+			# 	WHERE 
+			# 		ret IS NOT NULL
+
+			# 	MATCH
+			# 		(obj1:PDG_OBJECT)
+			# 			-[arg_edge:PDG]
+			# 				->(call:PDG_CALL)
+			# 					-[:CG]
+			# 						->(func)
+
+			# 	WHERE
+			# 		arg_edge.IdentifierName = param.IdentifierName
+
+			# 	SET arg_edge.valid = true
+
+			# 	RETURN *
 
 			session.run(reaches_return)
 

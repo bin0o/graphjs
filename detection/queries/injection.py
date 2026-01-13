@@ -34,35 +34,51 @@ class Injection:
 	bottom_up_greedy_injection_query = f"""
 		MATCH
 			(func:VariableDeclarator)-[ref_edge:REF]->(param:PDG_OBJECT)
-			WHERE
+		WHERE
 			ref_edge.RelationType = "param"
 
-			OPTIONAL MATCH
+		OPTIONAL MATCH
 			(param)-[edges:PDG*1..]->(sink_direct:TAINT_SINK)
-			WHERE
+		WHERE
 			ALL(edge IN edges WHERE NOT edge.RelationType = "ARG" OR edge.valid = true)
 
-			OPTIONAL MATCH
-			(param)-[edge:PDG]->(prop:PDG_OBJECT)
-					-[edges1:PDG*1..5]-(obj:PDG_OBJECT)
-					-[edge2:PDG]->(sink_indirect:TAINT_SINK)
-			WHERE
-					edge.RelationType = "DEP" AND
-					ALL(
-					edge1 in edges1 WHERE
-					edge1.RelationType in ["SO","NV"] OR (NOT edge1.RelationType = "ARG" OR edge1.valid = true) ) AND
-					edge2.RelationType = "DEP"
+		OPTIONAL MATCH	
+			(param)-[edges4:PDG*0..5]->(paramProp:PDG_OBJECT)-[edge1:PDG]->(obj:PDG_OBJECT) 
+				WHERE ALL(edge4 in edges4 WHERE NOT edge4.RelationType = "ARG" OR edge4.valid=True) AND edge1.RelationType = "DEP"
 
-			WITH func, param, [sink_direct, sink_indirect] AS sinks
-			UNWIND sinks AS sink
-			WITH func, param, sink
-			WHERE sink IS NOT NULL
+		OPTIONAL MATCH 
+			(obj)-[edges1:PDG*1..5]-(objSONV:PDG_OBJECT) 
+				WHERE ALL( edge1 in edges1 WHERE edge1.RelationType in ["SO","NV"] OR edge1.valid = true)
 
-			MATCH
-			(sink_cfg)-[:SINK]->(sink),
-			(sink_cfg)-[:AST]->(sink_ast)
+			WITH obj, sink_direct, func, param, objSONV,
+			
+				split(reduce(s = "", p IN split(objSONV.IdentifierName, '.')[1..] |
+				CASE WHEN s = "" THEN p ELSE s + "." + p END),'-')[0] AS taintedObjName,
 
-			RETURN DISTINCT func, param, sink, sink_cfg, sink_ast
+				split(reduce(s = "", p IN split(obj.IdentifierName, '.')[1..] |
+				CASE WHEN s = "" THEN p ELSE s + "." + p END),'-')[0] AS taintedPropName 
+
+			WHERE objSONV IS NULL OR taintedPropName CONTAINS taintedObjName
+
+			WITH
+				coalesce(objSONV, obj) AS obj,
+				sink_direct, func, param
+
+		OPTIONAL MATCH 
+			(obj)-[edge2:PDG]->(sink_indirect:TAINT_SINK) 
+
+			WHERE edge2.RelationType = "DEP" OR edge2.valid = true
+
+		WITH func, param, [sink_direct, sink_indirect] AS sinks
+		UNWIND sinks AS sink
+		WITH func, param, sink
+		WHERE sink IS NOT NULL
+
+		MATCH
+		(sink_cfg)-[:SINK]->(sink),
+		(sink_cfg)-[:AST]->(sink_ast)
+
+		RETURN DISTINCT func, param, sink, sink_cfg, sink_ast
 		"""
 
 	# Cache the taint propagation information
