@@ -500,6 +500,7 @@ class Route2ModuleTransformer:
         
         routes = []
         output_map = {}
+        correspondent_map = {}
         i = 0
         
         while i < len(lines):

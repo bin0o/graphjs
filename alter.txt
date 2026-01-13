@@ -133,5 +133,5 @@ deteta quando o argumento de um sink é um obj: eval({ data: userInput })
             OR
             - exemplo de sink { data: userInput }
 
-TODO: falta explicar como resolvemos o axios e o short hand syntax
+TODO: falta explicar como resolvemos o axios e o short hand syntax com mutiplos props no obj
     explicar como detetamos specific file type (.js, .mjs, .cjs)
