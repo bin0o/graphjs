@@ -48,7 +48,7 @@ class Injection:
 
 		OPTIONAL MATCH 
 			(obj)-[edges1:PDG*1..5]-(objSONV:PDG_OBJECT) 
-				WHERE ALL( edge1 in edges1 WHERE edge1.RelationType in ["SO","NV"] OR edge1.valid = true)
+				WHERE obj IS NULL OR objSONV IS NULL OR ALL( edge1 in edges1 WHERE edge1.RelationType in ["SO","NV"])
 
 			WITH obj, sink_direct, func, param, objSONV,
 			
@@ -58,7 +58,7 @@ class Injection:
 				split(reduce(s = "", p IN split(obj.IdentifierName, '.')[1..] |
 				CASE WHEN s = "" THEN p ELSE s + "." + p END),'-')[0] AS taintedPropName 
 
-			WHERE objSONV IS NULL OR taintedPropName CONTAINS taintedObjName
+			WHERE obj IS NULL OR objSONV IS NULL OR taintedPropName CONTAINS taintedObjName
 
 			WITH
 				coalesce(objSONV, obj) AS obj,
