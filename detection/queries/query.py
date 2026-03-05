@@ -42,54 +42,25 @@ class Query:
 					WHERE 
 						func.Id = \"{func}\"
 
-				OPTIONAL MATCH 
-						(param)
-						-[edges:PDG*1..]
-							->(return:PDG_RETURN)
-						WHERE ALL(
-						edge in edges WHERE
-						NOT edge.RelationType = "ARG" OR
-						edge.valid = true
-					)
+				CALL apoc.path.expandConfig(param, {{
+					relationshipFilter: "RET>|DEP>|NV>|ARG>|SO",
+					labelFilter: "+PDG_OBJECT|+PDG_CALL|/PDG_RETURN",
+					minLevel: 1,
+					maxLevel: 15,
+					uniqueness: "NODE_PATH",
+					bfs: true,
+					filterStartNode: false
+					}}) YIELD path
 
-				OPTIONAL MATCH	
-					(param)-[edges4:PDG*0..5]->(paramProp:PDG_OBJECT)-[edge1:PDG]->(obj:PDG_OBJECT) 
-						WHERE ALL(edge4 in edges4 WHERE NOT edge4.RelationType = "ARG" OR edge4.valid=True) AND edge1.RelationType = "DEP"
-
-				OPTIONAL MATCH 
-					(obj)-[edges1:PDG*1..5]-(objSONV:PDG_OBJECT) 
-						WHERE obj IS NULL OR objSONV IS NULL OR ALL( edge1 in edges1 WHERE edge1.RelationType in ["SO","NV"])
-
-					WITH obj, return, func, param, objSONV,
-					
-						split(reduce(s = "", p IN split(objSONV.IdentifierName, '.')[1..] |
-						CASE WHEN s = "" THEN p ELSE s + "." + p END),'-')[0] AS taintedObjName,
-
-						split(reduce(s = "", p IN split(obj.IdentifierName, '.')[1..] |
-						CASE WHEN s = "" THEN p ELSE s + "." + p END),'-')[0] AS taintedPropName 
-
-					WHERE obj IS NULL OR objSONV IS NULL OR taintedPropName CONTAINS taintedObjName
-
-					WITH
-						coalesce(objSONV, obj) AS obj,
-						return, func, param
-
-				OPTIONAL MATCH 
-					(obj)-[edge2:PDG]->(indirectReturn:PDG_RETURN) 
-
-					WHERE edge2.RelationType = "DEP" OR edge2.valid = true	
-
-				WITH 
-					param,
-					coalesce(return, indirectReturn) AS ret,
-					obj
-
-				WHERE 
-					ret IS NOT NULL
+					WITH func, param, path,
+						last(nodes(path)) AS return_node,
+						relationships(path) AS rels
+					WHERE return_node:PDG_RETURN
+					AND ALL(r IN rels WHERE type(r) <> "ARG" OR r.valid = true)
 
 				MATCH
 					(obj1:PDG_OBJECT)
-						-[arg_edge:PDG]
+						-[arg_edge]
 							->(call:PDG_CALL)
 								-[:CG]
 									->(func)
@@ -101,73 +72,6 @@ class Query:
 
 				RETURN *
 			"""
-
-			# MATCH 
-			# 		(func:VariableDeclarator)
-			# 			-[:REF]
-			# 				->(param:PDG_OBJECT)
-								
-			# 		WHERE 
-			# 			func.Id = \"{func}\"
-
-			# 	OPTIONAL MATCH 
-			# 			(param)
-			# 			-[edges:PDG*1..]
-			# 				->(return:PDG_RETURN)
-			# 			WHERE ALL(
-			# 			edge in edges WHERE
-			# 			NOT edge.RelationType = "ARG" OR
-			# 			edge.valid = true
-			# 		)
-
-			# 	OPTIONAL MATCH	
-			# 		(param)-[edges4:PDG*0..5]->(paramProp:PDG_OBJECT)-[edge1:PDG]->(obj:PDG_OBJECT) 
-			# 			WHERE ALL(edge4 in edges4 WHERE NOT edge4.RelationType = "ARG" OR edge4.valid=True) AND edge1.RelationType = "DEP"
-
-			# 	OPTIONAL MATCH 
-			# 		(obj)-[edges1:PDG*1..5]-(objSONV:PDG_OBJECT) 
-			# 			WHERE ALL( edge1 in edges1 WHERE edge1.RelationType in ["SO","NV"] OR edge1.valid = true)
-
-			# 		WITH obj, return, func, param, objSONV,
-					
-			# 			split(reduce(s = "", p IN split(objSONV.IdentifierName, '.')[1..] |
-			# 			CASE WHEN s = "" THEN p ELSE s + "." + p END),'-')[0] AS taintedObjName,
-
-			# 			split(reduce(s = "", p IN split(obj.IdentifierName, '.')[1..] |
-			# 			CASE WHEN s = "" THEN p ELSE s + "." + p END),'-')[0] AS taintedPropName 
-
-			# 		WHERE objSONV IS NULL OR taintedPropName CONTAINS taintedObjName
-
-			# 		WITH
-			# 			coalesce(objSONV, obj) AS obj,
-			# 			sink_direct, func, param
-
-			# 	OPTIONAL MATCH 
-			# 		(obj)-[edge2:PDG]->(indirectReturn:PDG_RETURN) 
-
-			# 		WHERE edge2.RelationType = "DEP" OR edge2.valid = true	
-
-			# 	WITH 
-			# 		param,
-			# 		coalesce(return, indirectReturn) AS ret,
-			# 		obj
-
-			# 	WHERE 
-			# 		ret IS NOT NULL
-
-			# 	MATCH
-			# 		(obj1:PDG_OBJECT)
-			# 			-[arg_edge:PDG]
-			# 				->(call:PDG_CALL)
-			# 					-[:CG]
-			# 						->(func)
-
-			# 	WHERE
-			# 		arg_edge.IdentifierName = param.IdentifierName
-
-			# 	SET arg_edge.valid = true
-
-			# 	RETURN *
 
 			session.run(reaches_return)
 
@@ -197,6 +101,33 @@ class Query:
 		"""
 
 		session.run(set_this_undefined_calls)
+
+		change_graph = """
+			MATCH (a)-[r:PDG]->(b)
+			WITH a,b,r,
+				coalesce(r.RelationType, "UNKNOWN") AS rt
+			WITH a,b,r,
+				CASE rt
+				WHEN "RET" THEN "RET"
+				WHEN "SO"  THEN "SO"
+				WHEN "NV"  THEN "NV"
+				WHEN "ARG" THEN "ARG"
+				WHEN "DEP" THEN "DEP"
+				WHEN "TAINT" THEN "TAINT"
+				ELSE "UNKNOWN"
+				END AS t
+			CALL apoc.create.relationship(a, t, properties(r), b) YIELD rel
+			RETURN count(rel) AS created
+			"""
+		
+		session.run(change_graph)
+
+		delete_old_rels = """
+			MATCH ()-[r:PDG]->()
+			DELETE r
+		"""
+
+		session.run(delete_old_rels)
 
 		get_call_graph = """
 				MATCH 
@@ -229,10 +160,8 @@ class Query:
 		mark_exported_params = """
 			MATCH
 				(:TAINT_SOURCE)
-					-[taint:PDG]
+					-[taint:TAINT]
 						->(param:PDG_OBJECT)
-			WHERE
-				taint.RelationType = 'TAINT'
 	
 			SET param.isExported = true	
 		"""
@@ -264,7 +193,7 @@ class Query:
 										->(called_func:VariableDeclarator),
 
 					(obj:PDG_OBJECT)
-						-[arg_edge:PDG]
+						-[arg_edge]
 							->(call)
 				WHERE
 					ref_edge.RelationType = "call" AND
@@ -278,30 +207,35 @@ class Query:
 
 		def get_calls_argument(session, calls, func):
 			callIds = "[" + ",".join(map(lambda x: f"\"{x}\"", calls)) + "]"
-			# gets the parameters that influence the call
-			query = f"""
-				MATCH
-					(func:VariableDeclarator)
-						-[ref_edge:REF]
-							->(param:PDG_OBJECT)
-								-[edges:PDG*1..]
-									->(call:PDG_CALL)
-				WHERE
-					ALL(
-							edge in edges[..-1] WHERE
-							NOT edge.RelationType = "ARG" OR
-							edge.valid = true
-					) AND
-					call.Id IN {callIds} AND
-					func.Id = \"{func}\"
 
-				RETURN collect(DISTINCT param) as params
+			query = f"""
+				MATCH (func:VariableDeclarator)-[ref_edge:REF]->(param:PDG_OBJECT)
+				WHERE func.Id = \"{func}\"
+
+				CALL apoc.path.expandConfig(param, {{
+					relationshipFilter: "RET>|DEP>|NV>|ARG>|SO",
+					labelFilter: "+PDG_OBJECT|/PDG_CALL",
+					minLevel: 1,
+					maxLevel: 15,
+					uniqueness: "NODE_PATH",
+					bfs: true,
+					filterStartNode: false
+				}}) YIELD path
+
+				WITH param,
+					last(nodes(path)) AS call,
+					relationships(path) AS rels
+				WHERE call:PDG_CALL
+				AND call.Id IN {callIds}
+				AND ALL(r IN rels[..-1] WHERE type(r) <> "ARG" OR r.valid = true)
+
+				RETURN collect(DISTINCT param) AS params
 			"""
 
 			return session.run(query).single()["params"]
 
 		if startParam["isExported"]:
-			return True
+			return True, startParam["Id"]
 
 		if startParam["IdentifierName"] in self.paramInfo:  # simply use the cached information
 			return self.paramInfo[startParam["IdentifierName"]]
@@ -315,12 +249,12 @@ class Query:
 
 				for param in params:
 					if not param["IdentifierName"] in visited:
-						result = self.confirm_vulnerability(session, caller, param)
-						self.paramInfo[param["IdentifierName"]] = result
+						result, paramId = self.confirm_vulnerability(session, caller, param)
+						self.paramInfo[param["IdentifierName"]] = (result, paramId)
 						if result:
-							return True
+							return True, paramId
 
-		return False
+		return False, None
 
 	# Timer related functions
 	def start_timer(self):
