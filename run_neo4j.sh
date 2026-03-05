@@ -2,7 +2,7 @@
 
 # ==== Configuration ====
 CONTAINER_NAME="neo4j_import_test"
-IMAGE_NAME="neo4j:latest"  # Specifying latest to ensure compatibility
+IMAGE_NAME="neo4j:2025.12"  # Specifying latest to ensure compatibility
 HTTP_PORT=7474
 BOLT_PORT=7687
 
@@ -46,6 +46,7 @@ docker run -d \
   -v "$GRAPH_PATH":/import \
   -v "$DATA_PATH"/databases:/data/databases \
   -v "$DATA_PATH"/transactions:/data/transactions \
+  -e NEO4J_PLUGINS=\[\"apoc\"\] \
   -e NEO4J_AUTH="${NEO4J_USER}/${NEO4J_PASSWORD}" \
   -e NEO4J_dbms_allow__upgrade=true \
   -e NEO4J_dbms_directories_import=/import \
