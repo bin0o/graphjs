@@ -5,4 +5,4 @@ class helper {
   }
 }
 
-module.exports = new helper;
+module.exports = helper;

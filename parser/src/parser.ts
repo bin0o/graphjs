@@ -234,7 +234,6 @@ function traverseDependencyGraph(depGraph: any, config: Config, normalizedOutput
                     //              handle(req)
                     //          }
                     //      }
-                    const trueFuncGraph = funcGraph.returns ?? funcGraph;
 
                     if (funcGraph.returns) {
                         const returnEdge = callNode.edges.find(
@@ -255,12 +254,30 @@ function traverseDependencyGraph(depGraph: any, config: Config, normalizedOutput
                             }
                             returnedFunctionMap.set(returnNode?.identifier,functionFactory)
                         }
+
+                         // Use the final resolved function (original or returned) for CG/ARG construction
+                        cpg.addExternalFuncNode(`function ${module}.${funcGraph.returns.identifier ?? ""}`, funcGraph.returns);
+
+                        const params = funcGraph.returns.edges
+                            .filter((e: GraphEdge) => e.label === "param")
+                            .map((e: GraphEdge) => e.nodes[1]);
+
+                        // connect object arguments to the parameters of the external function
+                        callNode.argsObjIDs.forEach((args: number[]) => {
+                            args.forEach((arg: number, index) => {
+                                if (arg !== -1 && params[index + 1]) { // if the argument is a constant its value is -1 (thus literals aren't considred here)
+                                    cpg.addEdge(arg, callNode.id, { type: "PDG", label: "ARG", objName: params[index + 1].identifier });
+                                }
+                            });
+                        });
+
+                        cpg.addEdge(callNode.id, funcGraph.returns.id, { type: "CG", label: "CG" });
                     }   
 
                     // Use the final resolved function (original or returned) for CG/ARG construction
-                    cpg.addExternalFuncNode(`function ${module}.${trueFuncGraph.identifier ?? ""}`, trueFuncGraph);
+                    cpg.addExternalFuncNode(`function ${module}.${funcGraph.identifier ?? ""}`, funcGraph);
 
-                    const params = trueFuncGraph.edges
+                    const params = funcGraph.edges
                         .filter((e: GraphEdge) => e.label === "param")
                         .map((e: GraphEdge) => e.nodes[1]);
 
@@ -273,7 +290,7 @@ function traverseDependencyGraph(depGraph: any, config: Config, normalizedOutput
                         });
                     });
 
-                    cpg.addEdge(callNode.id, trueFuncGraph.id, { type: "CG", label: "CG" });
+                    cpg.addEdge(callNode.id, funcGraph.id, { type: "CG", label: "CG" });
                 }
             }
         });
@@ -382,6 +399,7 @@ function traverseDependencyGraph(depGraph: any, config: Config, normalizedOutput
     const [cpg, nodeCounter, edgeCounter, trackers] = traverse(Object.keys(depGraph)[0], depGraph, config, normalizedOutputDir, silentMode, new Map<string, Object>(), 0, 0);
 
     trackers.addTaintedNodes();
+    trackers.addUserExportedParams();
 
     return cpg;
 }

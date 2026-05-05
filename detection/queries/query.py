@@ -20,6 +20,7 @@ class Query:
 	start_time = None
 
 	cgt = {}  # Transposed call graph
+	outer_funcs = {}  # Maps a function to its outer function (if it exists)
 	paramInfo = {}
 
 	def __init__(self, reconstruct_types, time_output_file):
@@ -114,6 +115,7 @@ class Query:
 				WHEN "ARG" THEN "ARG"
 				WHEN "DEP" THEN "DEP"
 				WHEN "TAINT" THEN "TAINT"
+				WHEN "USER_TAINT" THEN "USER_TAINT"
 				ELSE "UNKNOWN"
 				END AS t
 			CALL apoc.create.relationship(a, t, properties(r), b) YIELD rel
@@ -152,19 +154,81 @@ class Query:
 			func = record["func"]["Id"]
 			cg[func] = set(map(lambda x: (x["call"]["Id"], x["called_func"]["Id"]), record["calls"]))
 
+
+		get_outer_funcs = """
+			MATCH 
+					(func:VariableDeclarator)
+						-[ref_edge:REF]
+							->(call:PDG_CALL)
+								-[:CG]
+									->(called_func:VariableDeclarator),
+					(func)
+						-[:AST]
+							->(callee)
+				WHERE
+					ref_edge.RelationType = "call" AND (callee.Type="FunctionExpression" OR callee.Type="ArrowFunctionExpression")
+
+			OPTIONAL MATCH
+				(outer_func:VariableDeclarator)-[init_edge:AST]->(:FunctionExpression)-[block_edge:AST]->(outer_block:BlockStatement)
+					WHERE
+						init_edge.RelationType = "init"
+						AND block_edge.RelationType = "block"
+
+				MATCH
+					(outer_block)-[edge:AST]->(func)
+					WHERE
+						edge.RelationType = "stmt"
+
+			RETURN DISTINCT func, outer_func
+		"""
+
+		outer_results = session.run(get_outer_funcs)
+
+		for record in outer_results:
+			func = record["func"]["Id"]
+			outer_func = record["outer_func"]
+
+			if outer_func is None:
+				continue
+
+			outer_func_id = outer_func["Id"]
+
+			if func not in cg:
+				continue
+
+			self.outer_funcs[func] = outer_func_id
+
 		visited = set()
 		for start in cg.keys():
 			if start not in visited:
 				process_call_graph(session, cg, start, visited)
 
-		mark_exported_params = """
-			MATCH
-				(:TAINT_SOURCE)
-					-[taint:TAINT]
-						->(param:PDG_OBJECT)
-	
-			SET param.isExported = true	
+		verify_source_granularity = """
+		MATCH 
+			(a)-[r:USER_TAINT]->(b)
+		RETURN r;
 		"""
+
+		verify_user_taint = session.run(verify_source_granularity)
+
+		if verify_user_taint.peek():
+			mark_exported_params = """
+				MATCH
+					(:TAINT_SOURCE)
+						-[taint:USER_TAINT]
+							->(param:PDG_OBJECT)
+		
+				SET param.isExported = true	
+			"""
+		else:
+			mark_exported_params = """
+				MATCH
+					(:TAINT_SOURCE)
+						-[taint:TAINT]
+							->(param:PDG_OBJECT)
+		
+				SET param.isExported = true	
+			"""
 
 		session.run(mark_exported_params)
 
@@ -187,11 +251,10 @@ class Query:
 			get_calls_to_param_query = f"""
 				MATCH
 					(func:VariableDeclarator)
-							-[ref_edge:REF]
-								->(call:PDG_CALL)
-									-[:CG]
-										->(called_func:VariableDeclarator),
-
+						-[ref_edge:REF]
+							->(call:PDG_CALL)
+								-[:CG]
+									->(called_func:VariableDeclarator),
 					(obj:PDG_OBJECT)
 						-[arg_edge]
 							->(call)
@@ -200,37 +263,38 @@ class Query:
 					func.Id = \"{func}\" AND
 					arg_edge.IdentifierName = \"{param}\"
 
-				RETURN collect(DISTINCT call.Id) as calls
+				WITH call.Id AS callId, collect(DISTINCT obj.Id)[0] AS argId
+				RETURN apoc.map.fromPairs(collect([callId, argId])) AS call_to_argId
 			"""
 
-			return session.run(get_calls_to_param_query).single()["calls"]
+			return session.run(get_calls_to_param_query).single()["call_to_argId"]
 
-		def get_calls_argument(session, calls, func):
-			callIds = "[" + ",".join(map(lambda x: f"\"{x}\"", calls)) + "]"
+		def get_calls_argument(session, call_id, arg_id, func):
 
 			query = f"""
-				MATCH (func:VariableDeclarator)-[ref_edge:REF]->(param:PDG_OBJECT)
-				WHERE func.Id = \"{func}\"
-
-				CALL apoc.path.expandConfig(param, {{
-					relationshipFilter: "RET>|DEP>|NV>|ARG>|SO",
-					labelFilter: "+PDG_OBJECT|/PDG_CALL",
-					minLevel: 1,
-					maxLevel: 15,
-					uniqueness: "NODE_PATH",
-					bfs: true,
-					filterStartNode: false
-				}}) YIELD path
-
-				WITH param,
-					last(nodes(path)) AS call,
-					relationships(path) AS rels
-				WHERE call:PDG_CALL
-				AND call.Id IN {callIds}
-				AND ALL(r IN rels[..-1] WHERE type(r) <> "ARG" OR r.valid = true)
-
+				MATCH (func:VariableDeclarator)-[ref_edge:REF]->(param:PDG_OBJECT) WHERE func.Id = \"{func}\" 
+				
+				CALL apoc.path.expandConfig(param, {{ relationshipFilter: "RET>|DEP>|NV>|ARG>|SO", labelFilter: "+PDG_OBJECT|>PDG_CALL", 
+				minLevel: 1, 
+				maxLevel: 15, 
+				uniqueness: "NODE_PATH", 
+				bfs: true, 
+				filterStartNode: false }}) 
+				
+				YIELD path WITH param, 
+				last(nodes(path)) AS call, 
+				relationships(path) AS rels, 
+				nodes(path) AS ns 
+				
+				WHERE call:PDG_CALL AND 
+				call.Id = \"{call_id}\" AND 
+				size(ns) >= 2 AND 
+				ns[-2]:PDG_OBJECT AND 
+				ns[-2].Id = \"{arg_id}\" AND 
+				ALL(r IN rels[..-1] WHERE type(r) <> "ARG" OR r.valid = true) 
+				
 				RETURN collect(DISTINCT param) AS params
-			"""
+			"""			
 
 			return session.run(query).single()["params"]
 
@@ -244,15 +308,29 @@ class Query:
 
 		if funcId in self.cgt:
 			for caller in self.cgt[funcId]:
-				calls = get_calls_to_param(session, caller, startParam["IdentifierName"])
-				params = get_calls_argument(session, calls, caller)
+				outer_func = self.outer_funcs.get(caller, None)
+				results  = get_calls_to_param(session, caller, startParam["IdentifierName"])
 
-				for param in params:
-					if not param["IdentifierName"] in visited:
-						result, paramId = self.confirm_vulnerability(session, caller, param)
-						self.paramInfo[param["IdentifierName"]] = (result, paramId)
-						if result:
-							return True, paramId
+				for call_id, arg_id in results.items():
+					
+					params = []
+					if outer_func is not None:
+						params = get_calls_argument(session, call_id, arg_id, outer_func)
+
+						for param in params:
+							if not param["IdentifierName"] in visited:
+								result, paramId = self.confirm_vulnerability(session, outer_func, param)
+								self.paramInfo[param["IdentifierName"]] = (result, paramId)
+								if result:
+									return True, paramId
+					params += get_calls_argument(session, call_id, arg_id, caller)
+
+					for param in params:
+						if not param["IdentifierName"] in visited:
+							result, paramId = self.confirm_vulnerability(session, caller, param)
+							self.paramInfo[param["IdentifierName"]] = (result, paramId)
+							if result:
+								return True, paramId
 
 		return False, None
 

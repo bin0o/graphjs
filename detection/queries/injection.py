@@ -77,7 +77,6 @@ RETURN func, param, sink, sink_cfg, sink_ast, paths
 		else:
 			results = []
 
-		vuln_path_distincts = []
 		for record in results:
 			if query_type == "intra" or query_type == "bottom_up_greedy":
 				if query_type == "bottom_up_greedy":
@@ -85,6 +84,12 @@ RETURN func, param, sink, sink_cfg, sink_ast, paths
 					if not confirmed:
 						continue
 
+					sink_name = record["sink"]["IdentifierName"]
+					sink_lineno = json.loads(record["sink_ast"]["Location"])["start"]["line"]
+					file = json.loads(record["sink_ast"]["Location"])["fname"]
+					sink_file = my_utils.get_code_line_from_file(file, sink_lineno)
+					vuln_type: str = my_utils.get_injection_type(sink_name, config)
+	
 					self.paramIdentifier = f"""
 						MATCH (func:VariableDeclarator)-[edge:REF]->(param:PDG_OBJECT)
 							WHERE param.Id = \"{paramId}\" AND edge.RelationType = "param"
@@ -103,27 +108,27 @@ RETURN func, param, sink, sink_cfg, sink_ast, paths
 					param_ast_result = session.run(self.paramIdentifier)
 
 					if param_ast_result.peek() is None:
+						# no AST node found for the parameter, don't output source
+						vuln_path = {
+							"filename": file,
+							"vuln_type": vuln_type,
+							"sink": sink_file,
+							"sink_lineno": sink_lineno,
+							"sink_function": record["sink_cfg"]["Id"]
+						}
+
+						my_utils.save_intermediate_output(vuln_path, detection_output)
+						if not self.query.reconstruct_types and vuln_path not in vuln_paths:
+							vuln_paths.append(vuln_path)
+						elif self.query.reconstruct_types and vuln_path not in vuln_paths:
+							detection_results.append(vuln_path)
 						continue
-					
-					
 					param_ast = param_ast_result.single()["param_ast"]
 
-				sink_name = record["sink"]["IdentifierName"]
-				sink_lineno = json.loads(record["sink_ast"]["Location"])["start"]["line"]
-				file = json.loads(record["sink_ast"]["Location"])["fname"]
-				sink_file = my_utils.get_code_line_from_file(file, sink_lineno)
 				source_name = param_ast["IdentifierName"]
 				source_lineno = json.loads(param_ast["Location"])["start"]["line"]
 				source_param_file = json.loads(param_ast["Location"])["fname"]
 				source_param = my_utils.get_code_line_from_file(source_param_file, source_lineno)
-				vuln_type: str = my_utils.get_injection_type(sink_name, config)
-				vuln_path_distinct = {
-					"filename": file,
-					"vuln_type": vuln_type,
-					"sink": sink_file,
-					"sink_lineno": sink_lineno,
-					"sink_function": record["sink_cfg"]["Id"]
-				}
 
 				vuln_path = {
 					"filename": file,
@@ -143,12 +148,10 @@ RETURN func, param, sink, sink_cfg, sink_ast, paths
 					"sink_function": record["sink_cfg"]["Id"]
 				}
 				my_utils.save_intermediate_output(vuln_path, detection_output)
-				if not self.query.reconstruct_types and vuln_path_distinct not in vuln_path_distincts:
+				if not self.query.reconstruct_types and vuln_path not in vuln_paths:
 					vuln_paths.append(vuln_path)
-					vuln_path_distincts.append(vuln_path_distinct)
-				elif self.query.reconstruct_types and vuln_path_distinct not in vuln_path_distincts:
+				elif self.query.reconstruct_types and vuln_path not in vuln_paths:
 					detection_results.append(vuln_path)
-					vuln_path_distincts.append(vuln_path_distinct)
 		self.query.time_detection("injection")
 
 		if self.query.reconstruct_types:

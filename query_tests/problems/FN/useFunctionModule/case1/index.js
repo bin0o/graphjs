@@ -1,5 +1,5 @@
-const {g} = require('./helper')
+const helper = require('./helper')
 
 function f(x){
-    g(x)
+    helper.g(x)
 }

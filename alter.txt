@@ -63,6 +63,7 @@ allow functions to return factory functions
         -     }
         - }
         - when we're analysing the middleware callNode we will analyse the factoryFunction within createMiddleware 
+        - besides adding pdg edges from the outer function's params we also add from the nested function and a CG edge
 
 
 allow detection when returning multiple object properties:
